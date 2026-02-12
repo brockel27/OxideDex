@@ -11,10 +11,19 @@ async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) {
             // Height orignally in decimeters (dm), Weight in hectograms (hg)
             let height_in_meters = p.height as f32 / 10.0;
             let weight_in_kg = p.weight as f32 / 10.0;
+
+            // Map the abilities into a readable String
+            let abilities_list: String = p.abilities
+                .iter()
+                .map(|a| a.ability.as_ref().unwrap().name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+
             println!("Name: {}", p.name);
             println!("Height: {} m", height_in_meters);
             println!("Weight: {} kg", weight_in_kg);
             println!("Types: {}", types_to_string(&p));
+            println!("Abilities: {}", abilities_list); 
         }
         Err(error) => {
             eprintln!("Error: Could not find '{}'. ({})", pokemon_name, error);
