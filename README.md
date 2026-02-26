@@ -1,9 +1,10 @@
-Rustdex 🦀
+# Rustdex 🦀
 
 A high-performance, terminal-based Pokedex CLI built with Rust.
 
 Rustdex provides a sleek, color-coded interface for exploring Pokémon data directly from your terminal. It leverages the PokeAPI to provide real-time stats, types, and abilities with zero local database overhead.
-Features
+
+## Features
 
     Lookup: Search by Pokémon name or National ID.
 
@@ -15,7 +16,7 @@ Features
 
     Unit Conversion: Automatic conversion of internal API units to standard Metric (Meters/Kilograms).
 
-Tech Stack & Environment
+## Tech Stack & Environment
 
     Language: Rust
 
@@ -27,7 +28,7 @@ Tech Stack & Environment
 
     Development Environment: Developed on a Surface Pro 7 (Windows 11) using WSL2 (Windows Subsystem for Linux) with a minimal Kali Linux distribution.
 
-Installation
+## Installation
 
 To build Rustdex from source, you will need the Rust toolchain (Cargo) installed.
 
@@ -43,17 +44,17 @@ To build Rustdex from source, you will need the Rust toolchain (Cargo) installed
     Run the program:
     ./target/release/rustdex pikachu
 
-🖥 Usage
+## Usage
 
 You can run the program using cargo run followed by the Pokémon name or ID:
 
-# Search by name
+### Search by name
 cargo run -- lucario
 
-# Search by ID
+### Search by ID
 cargo run -- 448
 
-Academic Context
+## Academic Context
 
 This project was developed for an undergraduate level Programming Languages course to demonstrate proficiency in:
 
@@ -63,8 +64,7 @@ This project was developed for an undergraduate level Programming Languages cour
 
     Data Pipelines: Transforming raw JSON data into user-friendly, formatted terminal output.
 
-Sources:
-https://friendlyuser.github.io/posts/tech/rust/pokeapi_in_rust/
-(useful for getting started, now replaced by the rustemon wrapper library)
+
+## Sources:
 Rustemon: https://docs.rs/rustemon/latest/rustemon/
 Cargo CheatSheet: https://github.com/johnnysecond/rust-cargo-cheatsheet
