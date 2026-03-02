@@ -1,8 +1,8 @@
-# Rustdex 🦀
+# OxideDex 🦀
 
 A high-performance, terminal-based Pokedex CLI built with Rust.
 
-Rustdex provides a sleek, color-coded interface for exploring Pokémon data directly from your terminal. It leverages the PokeAPI to provide real-time stats, types, and abilities with zero local database overhead.
+OxideDex provides a sleek, color-coded interface for exploring Pokémon data directly from your terminal. It leverages the PokeAPI to provide real-time stats, types, and abilities with zero local database overhead.
 
 ## Features
 
@@ -30,19 +30,19 @@ Rustdex provides a sleek, color-coded interface for exploring Pokémon data dire
 
 ## Installation
 
-To build Rustdex from source, you will need the Rust toolchain (Cargo) installed.
+To build OxideDex from source, you will need the Rust toolchain (Cargo) installed.
 
     Clone the repository:
     Bash
 
-    git clone https://github.com/brockel27/rustdex.git
+    git clone https://github.com/brockel27/OxideDex.git
     cd rustdex
 
     Build the project:
     cargo build --release
 
     Run the program:
-    ./target/release/rustdex pikachu
+    ./target/release/OxideDex pikachu
 
 ## Usage
 
