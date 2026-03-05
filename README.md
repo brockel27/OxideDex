@@ -44,6 +44,15 @@ To build OxideDex from source, you will need the Rust toolchain (Cargo) installe
     Run the program:
     ./target/release/OxideDex pikachu
 
+## Terminal Requirements
+For the best experience, a truecolor terminal is recommended.
+- **Windows:** Windows Terminal (recommended), not cmd.exe or old PowerShell
+- **macOS:** iTerm2 or the default Terminal.app on macOS 10.15+
+- **Linux/WSL:** Any modern terminal emulator with COLORTERM=truecolor set
+
+To verify your terminal supports truecolor:
+echo $COLORTERM  # should print "truecolor"
+
 ## Usage
 
 You can run the program using cargo run followed by the Pokémon name or ID:
