@@ -8,11 +8,11 @@ pub struct Pokemon {
    pub name: String,
    pub height: u32,
    pub weight: u32,
-   pub types: Vec<PokemonType>,
+   pub types: Vec<TypeEntry>,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct PokemonType {
+pub struct TypeEntry {
    #[serde(rename = "type")]
    pub type_data: TypeData,
 }
