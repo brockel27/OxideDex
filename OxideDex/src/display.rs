@@ -50,7 +50,7 @@ pub fn types_to_string(p: &Pokemon) -> String {
             let name = &ptype.type_.name;
             // Format the name first (e.g., "fire"), then colorize it
             colorize_type(name).to_string()
-         })
+        })
         .collect::<Vec<_>>()
         .join(", ")
 }
@@ -65,23 +65,24 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) {
             let weight_in_kg = p.weight as f32 / 10.0;
 
             // Map the abilities into a readable String, originally a Vec
-            let abilities_list: String = p.abilities
-               .iter()
-               .filter_map(|a| a.ability.as_ref())
-               .map(|ability| format_name(&ability.name))
-               .collect::<Vec<_>>()
-               .join(", ");
+            let abilities_list: String = p
+                .abilities
+                .iter()
+                .filter_map(|a| a.ability.as_ref())
+                .map(|ability| format_name(&ability.name))
+                .collect::<Vec<_>>()
+                .join(", ");
 
             let formatted_name = format_name(&p.name);
 
-             println!("Name: {}", formatted_name);
-             println!("Height: {} m", height_in_meters);
-             println!("Weight: {} kg", weight_in_kg);
-             println!("Types: {}", types_to_string(&p));
-             println!("Abilities: {}", abilities_list);
-         }
-         Err(error) => {
-             eprintln!("Error: Could not find '{}'. ({})", pokemon_name, error);
+            println!("Name: {}", formatted_name);
+            println!("Height: {} m", height_in_meters);
+            println!("Weight: {} kg", weight_in_kg);
+            println!("Types: {}", types_to_string(&p));
+            println!("Abilities: {}", abilities_list);
+        }
+        Err(error) => {
+            eprintln!("Error: Could not find '{}'. ({})", pokemon_name, error);
         }
     }
 }

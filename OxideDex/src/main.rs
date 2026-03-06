@@ -1,9 +1,9 @@
 mod display;
- 
+
 use crate::display::*;
+use colored::*;
 use rustemon::client::RustemonClient;
 use std::env;
-use colored::*;
 
 #[tokio::main]
 async fn main() {
@@ -30,9 +30,8 @@ mod tests {
     #[test]
     fn print_color_palette() {
         let types = vec![
-            "fire", "water", "grass", "electric", "ice", "fighting", 
-            "poison", "ground", "flying", "psychic", "bug", "rock", 
-            "ghost", "dragon", "dark", "steel", "fairy"
+            "fire", "water", "grass", "electric", "ice", "fighting", "poison", "ground", "flying",
+            "psychic", "bug", "rock", "ghost", "dragon", "dark", "steel", "fairy",
         ];
 
         println!("\n--- Pokedex Color Palette ---");
