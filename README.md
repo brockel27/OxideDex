@@ -53,9 +53,9 @@ For the best experience, a truecolor terminal is recommended.
 To verify your terminal supports truecolor:
 echo $COLORTERM  # should print "truecolor"
 
-Verify color output by running:
-    '''cargo test print_color_palette -- --nocapture'''
-<img width="696" height="655" alt="image" src="https://github.com/user-attachments/assets/bf4420a7-ec52-40b9-a913-00cd5f3fece6" />
+    Verify color output by running:
+    cargo test print_color_palette -- --nocapture
+<img width="296" height="255" alt="image" src="https://github.com/user-attachments/assets/bf4420a7-ec52-40b9-a913-00cd5f3fece6" />
 
 
 ## Usage
