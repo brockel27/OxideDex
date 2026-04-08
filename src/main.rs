@@ -7,6 +7,7 @@ use std::env;
 
 #[tokio::main]
 async fn main() {
+    clearscreen::clear().expect("Failed to clear screen");
     // Ignore terminal settings for color output
     control::set_override(true);
     // std::env::args() doen't allow access to uninitialized memory
@@ -23,6 +24,7 @@ async fn main() {
     }
 }
 
+// use for testing: cargo test print_color_palette -- --nocapture
 #[cfg(test)]
 mod tests {
     use super::*;
