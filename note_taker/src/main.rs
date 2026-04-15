@@ -24,11 +24,27 @@ fn main() {
 
     // Grab today's date
     let today = chrono::Local::now().format("%-m/%-d/%y").to_string();
+    let date_check = std::fs::read_to_string("/home/brocke/OxideDex/Project_Notes.md").expect("Failed to read Project_Notes.md");
+    let last_date = date_check.lines().rev().find(|line| line.starts_with("## "));
 
-    // Create entry with date header
-    let entry = format!("## {}\n- {}\n\n", today, note);
-    
-    // Create OpenOptions object with write enable
+    let entry = match last_date {
+        // append header + note (empty file or no headers yet)
+        None => {
+            format!("\n## {}\n- {}\n", today, note)
+        }
+
+        Some(line) => {
+            let date = &line[3..];
+            if date == today {
+                // append note only
+                format!("- {}\n", note)
+            } else {
+                // append header + note
+                format!("\n## {}\n- {}\n", today, note)
+            }
+        }
+    };
+
     let mut file = OpenOptions::new()
         .append(true)
         .create(true)
@@ -40,5 +56,6 @@ fn main() {
         .expect("Failed to write to Project_Notes.md");
 
     // Success!
-    println!("Note added successfully.");
+    println!("Note added successfully:");
+    println!("{}", entry);
 }

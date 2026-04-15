@@ -48,4 +48,7 @@
 
 ## 4/15/26
 - Built release targeted for Windows Terminal (will be using portable version)
-- Set up Progress Notes workflow with Claude — note_taker Rust CLI built and added to PATH
+- Set up Progress Notes workflow with Claude
+- note_taker Rust CLI built and added to PATH
+- testing new date checker functionality
+- Added same-day detection to note_taker — skips header if today's date already exists in file
