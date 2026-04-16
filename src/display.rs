@@ -1,16 +1,7 @@
 use crate::format::*;
 use rustemon::client::RustemonClient;
 use rustemon::pokemon::pokemon;
-use image::{DynamicImage, GenericImageView};
 use std::io::Cursor;
-
-fn is_transparent(img: &DynamicImage, start: u32, is_row: bool) -> bool {
-    if is_row {
-        (0..img.width()).all(|x| img.get_pixel(x, start).0[3] == 0)
-    } else {
-        (0..img.height()).all(|y| img.get_pixel(start, y).0[3] == 0)
-    }
-}
 
 async fn fetch_and_display_sprite(pokemon_id: i64) {
     let url = format!(
@@ -83,8 +74,18 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) {
             println!("Base Stats:");
             println!("============");            
 
+            let bar_width = 50.0;
+
             p.stats.iter().for_each(|s| {
-                println!("{}: {}", format_name(&s.stat.name), s.base_stat);
+                print!("{}: {}", format_stat_name(&s.stat.name), s.base_stat);
+                print!("   [");
+
+                let bar_length = (s.base_stat as f32 / 255.0 * bar_width as f32) as usize;
+
+                for _element in 1..=bar_length {
+                    print!("#");
+                }
+                println!("]");
             });
 
             let base_stat_total: i64 = p.stats.iter().map(|s| s.base_stat).sum();

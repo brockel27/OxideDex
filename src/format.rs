@@ -1,7 +1,8 @@
 use rustemon::model::pokemon::Pokemon;
 use colored::*;
+use image::{DynamicImage, GenericImageView};
 
-// Helper to apply colors based on the type name
+// --- Types -------------------------
 pub fn colorize_type(type_name: &str) -> ColoredString {
     let formatted = format_name(type_name);
     match type_name.to_lowercase().as_str() {
@@ -26,6 +27,19 @@ pub fn colorize_type(type_name: &str) -> ColoredString {
     }
 }
 
+pub fn types_to_string(p: &Pokemon) -> String {
+    p.types
+        .iter()
+        .map(|ptype| {
+            let name = &ptype.type_.name;
+            // Format the name first (e.g., "fire"), then colorize it
+            colorize_type(name).to_string()
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+// --- Names --------------------------
 pub fn format_name(name: &str) -> String {
     name.split('-') // Split at hyphens
         .map(|word| {
@@ -40,14 +54,23 @@ pub fn format_name(name: &str) -> String {
         .join(" ") // Join back with spaces
 }
 
-pub fn types_to_string(p: &Pokemon) -> String {
-    p.types
-        .iter()
-        .map(|ptype| {
-            let name = &ptype.type_.name;
-            // Format the name first (e.g., "fire"), then colorize it
-            colorize_type(name).to_string()
-        })
-        .collect::<Vec<_>>()
-        .join(", ")
+pub fn format_stat_name(name: &str) -> String {
+    match name {
+        "hp" => name.to_string().to_uppercase(),
+        "attack" |
+        "defense"|
+        "speed" => format_name(&name),
+        "special-attack" => "Sp. Atk".to_string(),
+        "special-defense" => "Sp. Def".to_string(),
+        _ => name.to_string(),
+    }    
+}
+
+// --- Images --------------------------
+pub fn is_transparent(img: &DynamicImage, start: u32, is_row: bool) -> bool {
+    if is_row {
+        (0..img.width()).all(|x| img.get_pixel(x, start).0[3] == 0)
+    } else {
+        (0..img.height()).all(|y| img.get_pixel(start, y).0[3] == 0)
+    }
 }
