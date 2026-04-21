@@ -3,42 +3,48 @@ use rustemon::client::RustemonClient;
 use rustemon::pokemon::pokemon;
 use std::io::Cursor;
 
-async fn fetch_and_display_sprite(pokemon_id: i64) {
-    let url = format!(
-        "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{}.png",
-        pokemon_id
-    );
-    // fetch headers of image data stream
-    match reqwest::get(&url).await {
-        // fetch actual bytes in body of image data stream
+async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
+    match reqwest::get(url).await {
         Ok(response) => match response.bytes().await {
-            Ok(bytes) => {
-                match image::load(Cursor::new(bytes), image::ImageFormat::Png) {
-                    Ok(img) => {
-                        let (mut top, mut bottom) = (0, img.height() - 1);
-                        let (mut left, mut right) = (0, img.width() - 1);
-
-                        while top < bottom && is_transparent(&img, top, true) { top += 1; }
-                        while bottom > top && is_transparent(&img, bottom, true) { bottom -= 1; }
-                        while left < right && is_transparent(&img, left, false) { left += 1; }
-                        while right > left && is_transparent(&img, right, false) { right -= 1; }
-
-                        let trimmed = img.crop_imm(left, top, right - left + 1, bottom - top + 1);
-
-                        let config = viuer::Config {
-                            transparent: true,
-                            absolute_offset: false,
-                            width: Some(48),
-                            ..Default::default()
-                        };
-                        let _ = viuer::print(&trimmed, &config);
-                    }
-                    Err(e) => eprintln!("Could not decode sprite: {}", e),
-                }
-            }
-            Err(e) => eprintln!("Could not download sprite: {}", e),
+            Ok(bytes) => Some(bytes),
+            Err(e) => { eprintln!("Could not download sprite: {}", e); None }
         },
-        Err(e) => eprintln!("Could not fetch sprite: {}", e),
+        Err(e) => { eprintln!("Could not fetch sprite: {}", e); None }
+    }
+}
+
+fn display_sprite(bytes: bytes::Bytes) {
+    match image::load(Cursor::new(bytes), image::ImageFormat::Png) {
+        Ok(img) => {
+            let (mut top, mut bottom) = (0, img.height() - 1);
+            let (mut left, mut right) = (0, img.width() - 1);
+            while top < bottom && is_transparent(&img, top, true) { top += 1; }
+            while bottom > top && is_transparent(&img, bottom, true) { bottom -= 1; }
+            while left < right && is_transparent(&img, left, false) { left += 1; }
+            while right > left && is_transparent(&img, right, false) { right -= 1; }
+            let trimmed = img.crop_imm(left, top, right - left + 1, bottom - top + 1);
+
+            // Re-add a small transparent border so bilinear resize doesn't blend
+            // edge content pixels with the image boundary, causing fringe artifacts.
+            let pad = 4u32;
+            let trimmed_rgba = trimmed.to_rgba8();
+            let mut padded = image::RgbaImage::new(
+                trimmed_rgba.width() + pad * 2,
+                trimmed_rgba.height() + pad * 2,
+            );
+            image::imageops::overlay(&mut padded, &trimmed_rgba, pad as i64, pad as i64);
+
+            let config = viuer::Config {
+                transparent: true,
+                absolute_offset: false,
+                width: Some(96),
+                use_kitty: false,
+                use_iterm: false,
+                ..Default::default()
+            };
+            let _ = viuer::print(&image::DynamicImage::from(padded), &config);
+        }
+        Err(e) => eprintln!("Could not decode sprite: {}", e),
     }
 }
 
@@ -47,7 +53,11 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) {
     match pokemon::get_by_name(pokemon_name, client).await {
         Ok(p) => {
 
-            fetch_and_display_sprite(p.id).await;
+            if let Some(url) = p.sprites.front_default.as_deref() {
+                if let Some(bytes) = fetch_sprite(url).await {
+                    display_sprite(bytes);
+                }
+            }
 
             // Height orignally in decimeters (dm), Weight in hectograms (hg)
             let height_in_meters = p.height as f32 / 10.0;
