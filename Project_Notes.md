@@ -52,3 +52,13 @@
 - note_taker Rust CLI built and added to PATH
 - testing new date checker functionality
 - Added same-day detection to note_taker — skips header if today's date already exists in file
+- added formatting for stat names
+
+## 4/20/26
+- added Claude code to repo
+- tried fixing sprite display w/ Claude - WIP
+- fixed sprite display with Claude's help - verified changes
+
+## 4/21/26
+- created dedicated stat bar function
+- stats and info now displayed side-by-side

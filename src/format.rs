@@ -2,7 +2,6 @@ use rustemon::model::pokemon::Pokemon;
 use colored::*;
 use image::{DynamicImage, GenericImageView};
 
-// --- Types -------------------------
 pub fn colorize_type(type_name: &str) -> ColoredString {
     let formatted = format_name(type_name);
     match type_name.to_lowercase().as_str() {
@@ -30,43 +29,36 @@ pub fn colorize_type(type_name: &str) -> ColoredString {
 pub fn types_to_string(p: &Pokemon) -> String {
     p.types
         .iter()
-        .map(|ptype| {
-            let name = &ptype.type_.name;
-            // Format the name first (e.g., "fire"), then colorize it
-            colorize_type(name).to_string()
-        })
+        .map(|ptype| colorize_type(&ptype.type_.name).to_string())
         .collect::<Vec<_>>()
         .join(", ")
 }
 
-// --- Names --------------------------
 pub fn format_name(name: &str) -> String {
-    name.split('-') // Split at hyphens
+    name.split('-')
         .map(|word| {
             let mut chars = word.chars();
             match chars.next() {
-                // Capitalize first letter, keep the rest as is
                 None => String::new(),
                 Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
             }
         })
         .collect::<Vec<String>>()
-        .join(" ") // Join back with spaces
+        .join(" ")
 }
 
 pub fn format_stat_name(name: &str) -> String {
     match name {
-        "hp" => name.to_string().to_uppercase(),
+        "hp"               => name.to_uppercase(),
         "attack" |
-        "defense"|
-        "speed" => format_name(&name),
-        "special-attack" => "Sp. Atk".to_string(),
-        "special-defense" => "Sp. Def".to_string(),
-        _ => name.to_string(),
-    }    
+        "defense" |
+        "speed"            => format_name(name),
+        "special-attack"   => "Sp. Atk".to_string(),
+        "special-defense"  => "Sp. Def".to_string(),
+        _                  => name.to_string(),
+    }
 }
 
-// --- Images --------------------------
 pub fn is_transparent(img: &DynamicImage, start: u32, is_row: bool) -> bool {
     if is_row {
         (0..img.width()).all(|x| img.get_pixel(x, start).0[3] == 0)

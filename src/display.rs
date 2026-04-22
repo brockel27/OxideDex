@@ -24,8 +24,7 @@ fn display_sprite(bytes: bytes::Bytes) {
             while right > left && is_transparent(&img, right, false) { right -= 1; }
             let trimmed = img.crop_imm(left, top, right - left + 1, bottom - top + 1);
 
-            // Re-add a small transparent border so bilinear resize doesn't blend
-            // edge content pixels with the image boundary, causing fringe artifacts.
+            // Transparent border prevents bilinear resize from blending edge pixels, causing fringe.
             let pad = 4u32;
             let trimmed_rgba = trimmed.to_rgba8();
             let mut padded = image::RgbaImage::new(
@@ -48,22 +47,49 @@ fn display_sprite(bytes: bytes::Bytes) {
     }
 }
 
+// ANSI escape bytes in colored strings would inflate a naive `.len()`.
+fn visible_len(s: &str) -> usize {
+    let mut len = 0;
+    let mut in_escape = false;
+    for c in s.chars() {
+        if c == '\x1b' { in_escape = true; }
+        else if in_escape { if c == 'm' { in_escape = false; } }
+        else { len += 1; }
+    }
+    len
+}
+
+fn build_stat_lines(stats: &[rustemon::model::pokemon::PokemonStat], total: i64) -> Vec<String> {
+    const BAR_WIDTH: usize = 20;
+    let mut lines = vec![
+        "Base Stats:".to_string(),
+        "============".to_string(),
+    ];
+    for s in stats {
+        let name = format_stat_name(&s.stat.name);
+        let value = s.base_stat;
+        let bar_len = (value as f32 / 255.0 * BAR_WIDTH as f32) as usize;
+        let bar = "#".repeat(bar_len);
+        lines.push(format!("{:<7} {:>3}  [{:<20}]", name, value, bar));
+    }
+    lines.push("___".to_string());
+    lines.push(format!("BST: {}", total));
+    lines
+}
+
 pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) {
-    // Rustemon's get_by_name handles the API request and JSON parsing
     match pokemon::get_by_name(pokemon_name, client).await {
         Ok(p) => {
-
             if let Some(url) = p.sprites.front_default.as_deref() {
                 if let Some(bytes) = fetch_sprite(url).await {
                     display_sprite(bytes);
                 }
             }
 
-            // Height orignally in decimeters (dm), Weight in hectograms (hg)
+            // Height originally in decimeters (dm), Weight in hectograms (hg)
             let height_in_meters = p.height as f32 / 10.0;
             let weight_in_kg = p.weight as f32 / 10.0;
 
-            // Map the abilities into a readable String, originally a Vec
             let abilities_list: String = p
                 .abilities
                 .iter()
@@ -73,35 +99,49 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) {
                 .join(", ");
 
             let formatted_name = format_name(&p.name);
+            let types_str = types_to_string(&p);
+            let types_vis = visible_len(&types_str);
 
-            println!("============");
-            println!("Name: {}", formatted_name);
-            println!("Height: {} m", height_in_meters);
-            println!("Weight: {} kg", weight_in_kg);
-            println!("Types: {}", types_to_string(&p));
-            println!("Abilities: {}", abilities_list);
-            println!("");
-            println!("Base Stats:");
-            println!("============");            
+            let value_width = [
+                formatted_name.len(),
+                format!("{} m", height_in_meters).len(),
+                format!("{} kg", weight_in_kg).len(),
+                types_vis,
+                abilities_list.len(),
+            ].iter().copied().max().unwrap_or(10).max(12);
 
-            let bar_width = 50.0;
+            let info_width = 14 + value_width;
+            let sep = "=".repeat(info_width);
+            let types_pad = " ".repeat(value_width.saturating_sub(types_vis));
 
-            p.stats.iter().for_each(|s| {
-                print!("{}: {}", format_stat_name(&s.stat.name), s.base_stat);
-                print!("   [");
-
-                let bar_length = (s.base_stat as f32 / 255.0 * bar_width as f32) as usize;
-
-                for _element in 1..=bar_length {
-                    print!("#");
-                }
-                println!("]");
-            });
+            let info_lines: Vec<String> = vec![
+                sep.clone(),
+                format!("| Name:      {:<w$}|", formatted_name,             w = value_width),
+                format!("| Height:    {:<w$}|", format!("{} m", height_in_meters), w = value_width),
+                format!("| Weight:    {:<w$}|", format!("{} kg", weight_in_kg),    w = value_width),
+                format!("| Types:     {}{}|", types_str, types_pad),
+                format!("| Abilities: {:<w$}|", abilities_list,              w = value_width),
+                sep,
+            ];
 
             let base_stat_total: i64 = p.stats.iter().map(|s| s.base_stat).sum();
+            let stat_lines = build_stat_lines(&p.stats, base_stat_total);
 
-            println!("___");
-            println!("BST: {}", base_stat_total);
+            const GAP: usize = 2;
+            let max_lines = info_lines.len().max(stat_lines.len());
+            for i in 0..max_lines {
+                match (info_lines.get(i), stat_lines.get(i)) {
+                    (Some(left), Some(right)) => {
+                        let pad = " ".repeat(info_width + GAP - visible_len(left));
+                        println!("{}{}{}", left, pad, right);
+                    }
+                    (Some(left), None) => println!("{}", left),
+                    (None, Some(right)) => {
+                        println!("{:>width$}{}", "", right, width = info_width + GAP);
+                    }
+                    (None, None) => {}
+                }
+            }
         }
 
         Err(error) => {
