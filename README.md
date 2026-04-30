@@ -1,84 +1,129 @@
-# OxideDex 🦀
+<div align="center">
 
-A high-performance, terminal-based Pokedex CLI built with Rust.
+```
+ ██████╗ ██╗  ██╗██╗██████╗ ███████╗██████╗ ███████╗██╗  ██╗
+██╔═══██╗╚██╗██╔╝██║██╔══██╗██╔════╝██╔══██╗██╔════╝╚██╗██╔╝
+██║   ██║ ╚███╔╝ ██║██║  ██║█████╗  ██║  ██║█████╗   ╚███╔╝ 
+██║   ██║ ██╔██╗ ██║██║  ██║██╔══╝  ██║  ██║██╔══╝   ██╔██╗ 
+╚██████╔╝██╔╝ ██╗██║██████╔╝███████╗██████╔╝███████╗██╔╝ ██╗
+ ╚═════╝ ╚═╝  ╚═╝╚═╝╚═════╝ ╚══════╝╚═════╝ ╚══════╝╚═╝  ╚═╝
+```
 
-OxideDex provides a sleek, color-coded interface for exploring Pokémon data directly from your terminal. It leverages the PokeAPI to provide real-time stats, types, and abilities with zero local database overhead.
+<img src="OxideDex_logo.png" alt="OxideDex Logo" width="220"/>
+
+*A high-performance, terminal-based Pokédex CLI built with Rust*
+
+![Rust](https://img.shields.io/badge/built%20with-Rust-orange?style=flat-square&logo=rust)
+![PokeAPI](https://img.shields.io/badge/data-PokéAPI-red?style=flat-square)
+![License](https://img.shields.io/badge/license-MIT-grey?style=flat-square)
+
+</div>
+
+---
+
+## Overview
+
+**OxideDex** leverages the PokéAPI to provide real-time stats, types, and abilities with a sleek, color-coded terminal interface — and zero local database overhead.
+
+---
 
 ## Features
 
-    Lookup: Search by Pokémon name or National ID.
+- 🔍 **Lookup** — Search by Pokémon name or National Dex ID
+- ⚡ **Asynchronous Architecture** — Powered by `tokio` and `rustemon` for non-blocking API requests
+- ✨ **Formatted UI** — Automatic title-casing and kebab-case cleaning for a polished look
+- 🎨 **Dynamic Color Palette** — Historically accurate type colors optimized for modern terminal emulators
+- 📏 **Unit Conversion** — Automatic conversion of internal API units to standard Metric (m/kg)
+- 🖼️ **Sprite Rendering** — Displays Pokémon sprites inline using true-color Unicode half-blocks
+- 📊 **Base Stat Visualization** — ASCII progress bars for all six stats *(in progress)*
 
-    Asynchronous Architecture: Powered by tokio and rustemon for non-blocking API requests.
+---
 
-    Formatted UI: Automatic title-casing and "kebab-case" cleaning for a polished look.
+## Tech Stack
 
-    Dynamic Color Palette: Historically accurate type colors optimized for modern terminal emulators.
+| Crate | Purpose |
+|---|---|
+| `rustemon` | PokéAPI client |
+| `tokio` | Async runtime |
+| `colored` | Terminal type color styling |
+| `reqwest` | HTTP sprite fetching |
+| `image` | Image decoding |
+| `viuer` | Terminal sprite rendering |
 
-    Unit Conversion: Automatic conversion of internal API units to standard Metric (Meters/Kilograms).
+**Environment:** Developed on a Surface Pro 7 (Windows 11) using WSL2 with a minimal Kali Linux distribution.
 
-## Tech Stack & Environment
-
-    Language: Rust
-
-    Runtime: Tokio (Asynchronous I/O)
-
-    API Wrapper: Rustemon
-
-    UI/Styling: Colored
-
-    Development Environment: Developed on a Surface Pro 7 (Windows 11) using WSL2 (Windows Subsystem for Linux) with a minimal Kali Linux distribution.
+---
 
 ## Installation
 
-To build OxideDex from source, you will need the Rust toolchain (Cargo) installed.
+Requires the Rust toolchain ([install here](https://rustup.rs/)).
 
-    Clone the repository:
-    Bash
+```bash
+# Clone the repository
+git clone https://github.com/brockel27/OxideDex.git
+cd OxideDex
 
-    git clone https://github.com/brockel27/OxideDex.git
-    cd rustdex
+# Build the project
+cargo build --release
 
-    Build the project:
-    cargo build --release
+# Run the program
+./target/release/OxideDex pikachu
+```
 
-    Run the program:
-    ./target/release/OxideDex pikachu
-
-## Terminal Requirements
-For the best experience, a truecolor terminal is recommended.
-- **Windows:** Windows Terminal (recommended), not cmd.exe or old PowerShell
-- **macOS:** iTerm2 or the default Terminal.app on macOS 10.15+
-- **Linux/WSL:** Any modern terminal emulator with COLORTERM=truecolor set
-
-To verify your terminal supports truecolor:
-echo $COLORTERM  # should print "truecolor"
-
-    Verify color output by running:
-    cargo test print_color_palette -- --nocapture
-<img width="296" height="255" alt="image" src="https://github.com/user-attachments/assets/bf4420a7-ec52-40b9-a913-00cd5f3fece6" />
-
+---
 
 ## Usage
 
-You can run the program using cargo run followed by the Pokémon name or ID:
-
-### Search by name
+```bash
+# Search by name
 cargo run -- lucario
 
-### Search by ID
+# Search by ID
 cargo run -- 448
+```
 
-## Academic Context
+---
 
-This project was developed for an undergraduate level Programming Languages course to demonstrate proficiency in:
+## Terminal Requirements
 
-    Ownership & Borrowing: Managing memory safely in a systems-level language.
+A truecolor terminal is recommended for the best experience.
 
-    Asynchronous I/O: Handling network requests without blocking the main execution thread.
+| Platform | Recommended |
+|---|---|
+| Windows | Windows Terminal (not cmd.exe or legacy PowerShell) |
+| macOS | iTerm2 or Terminal.app (macOS 10.15+) |
+| Linux/WSL | Any modern emulator with `COLORTERM=truecolor` |
 
-    Data Pipelines: Transforming raw JSON data into user-friendly, formatted terminal output.
+Verify truecolor support:
 
+```bash
+echo $COLORTERM  # should print "truecolor"
 
-## Sources:
-Rustemon: https://docs.rs/rustemon/latest/rustemon/
-Cargo CheatSheet: https://github.com/johnnysecond/rust-cargo-cheatsheet
+# Verify color output
+cargo test print_color_palette -- --nocapture
+```
+
+---
+
+## Milestone Progress
+
+| Milestone | Description | Status |
+|---|---|---|
+| M1 | Basic lookup + type color mapping | ✅ |
+| M2 | Title-casing + display formatting | ✅ |
+| M3 | Unit conversion (height/weight) | ✅ |
+| M3.5 | Terminal sprite rendering | ✅ |
+| M4 | Base stat ASCII visualization | 🔄 |
+
+---
+
+## Sources
+
+- [Rustemon docs](https://docs.rs/rustemon/latest/rustemon/)
+- [Cargo Cheatsheet](https://github.com/johnnysecond/rust-cargo-cheatsheet)
+
+---
+
+<div align="center">
+<sub>Built with ⚙️ and ❤️ as a Rust learning project</sub>
+</div>
