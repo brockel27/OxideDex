@@ -1,0 +1,4 @@
+
+fc8f8c5c6e0dbda83e242c7ce63b1e2417346030c52e0f69e866100a50e44763	{"key":"GET:https://pokeapi.co/api/v2/pokemon/pikachu","integrity":"sha256-g28S5Eo2yyK2uEFnVJd54ZlvYlAT4E47TDvgtwCAtlA=","time":1776827865118,"size":277602,"metadata":null,"raw_metadata":null}
+fa5eea137b9642916a824687bc05ed149c3f3a91216287b6b4df27863895fca5	{"key":"GET:https://pokeapi.co/api/v2/pokemon/pikachu","integrity":"sha256-3RxT2XNCwgExsXbv/weFtMiOyfhj2aBZA6OGh4+/UEA=","time":1777074084390,"size":277672,"metadata":null,"raw_metadata":null}
+1bf33c2f167c9556ba5d924c1c3d0f42b477ad7ab2b1a65fdff04295b36d865f	{"key":"GET:https://pokeapi.co/api/v2/pokemon/pikachu","integrity":"sha256-Ulx/tIloL2eHD7Gvmo01Flz5c5lx30znvqm9vpwyvlM=","time":1777525377162,"size":277672,"metadata":null,"raw_metadata":null}
