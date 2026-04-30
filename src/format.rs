@@ -59,6 +59,13 @@ pub fn format_stat_name(name: &str) -> String {
     }
 }
 
+pub fn format_generation(gen_name: &str) -> String {
+    gen_name
+        .strip_prefix("generation-")
+        .map(|roman| format!("{}", roman.to_uppercase()))
+        .unwrap_or_else(|| format_name(gen_name))
+}
+
 pub fn is_transparent(img: &DynamicImage, start: u32, is_row: bool) -> bool {
     if is_row {
         (0..img.width()).all(|x| img.get_pixel(x, start).0[3] == 0)

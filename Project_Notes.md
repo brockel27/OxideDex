@@ -69,3 +69,4 @@
 ## 4/29/26
 - created logo and uploaded to repo
 - printed logo to console but it looks kinda bad
+- add generation and dex no to display

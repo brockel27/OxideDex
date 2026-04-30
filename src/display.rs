@@ -1,6 +1,6 @@
 use crate::format::*;
 use rustemon::client::RustemonClient;
-use rustemon::pokemon::pokemon;
+use rustemon::pokemon::{pokemon, pokemon_species};
 use std::io::Cursor;
 
 //const LOGO_BYTES: &[u8] = include_bytes!("../OxideDex_logo.png");
@@ -42,7 +42,7 @@ fn display_sprite(bytes: bytes::Bytes) {
             let config = viuer::Config {
                 transparent: true,
                 absolute_offset: false,
-                width: Some(96),
+                width: Some(128),
                 use_kitty: false,
                 use_iterm: false,
                 ..Default::default()
@@ -94,6 +94,11 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) {
                 }
             }
 
+            let generation_str = match pokemon_species::get_by_name(&p.species.name, client).await {
+                Ok(species) => format_generation(&species.generation.name),
+                Err(_) => String::from("Unknown"),
+            };
+
             // Height originally in decimeters (dm), Weight in hectograms (hg)
             let height_in_meters = p.height as f32 / 10.0;
             let weight_in_kg = p.weight as f32 / 10.0;
@@ -124,11 +129,14 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) {
 
             let info_lines: Vec<String> = vec![
                 sep.clone(),
-                format!("| Name:      {:<w$}|", formatted_name,             w = value_width),
-                format!("| Height:    {:<w$}|", format!("{} m", height_in_meters), w = value_width),
-                format!("| Weight:    {:<w$}|", format!("{} kg", weight_in_kg),    w = value_width),
-                format!("| Types:     {}{}|", types_str, types_pad),
-                format!("| Abilities: {:<w$}|", abilities_list,              w = value_width),
+                format!("| Name:       {:<w$}|", formatted_name,             w = value_width),
+                format!("| Dex No:     {:<w$}|", format!("#{}", p.id), w = value_width),
+                format!("| Height:     {:<w$}|", format!("{} m", height_in_meters), w = value_width),
+                format!("| Weight:     {:<w$}|", format!("{} kg", weight_in_kg),    w = value_width),
+                format!("| Types:      {}{}|", types_str, types_pad),
+                format!("| Abilities:  {:<w$}|", abilities_list,              w = value_width),
+                format!("| Generation: {:<w$}|", generation_str,  w = value_width),
+                format!("| {:<w$}|", "",                           w = value_width + 12),
                 sep,
             ];
 
@@ -138,19 +146,25 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) {
             // Two-column layout
             const GAP: usize = 2;
             let max_lines = info_lines.len().max(stat_lines.len());
+
             for i in 0..max_lines {
-                match (info_lines.get(i), stat_lines.get(i)) {
+                match (info_lines.get(i), stat_lines.get(i))
+                    {
                     (Some(left), Some(right)) => {
                         let pad = " ".repeat(info_width + GAP - visible_len(left));
                         println!("{}{}{}", left, pad, right);
                     }
+
                     (Some(left), None) => println!("{}", left),
+
                     (None, Some(right)) => {
                         println!("{:>width$}{}", "", right, width = info_width + GAP);
                     }
+
                     (None, None) => {}
                 }
             }
+
         }
 
         Err(error) => {
