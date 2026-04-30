@@ -3,6 +3,12 @@ use rustemon::client::RustemonClient;
 use rustemon::pokemon::pokemon;
 use std::io::Cursor;
 
+//const LOGO_BYTES: &[u8] = include_bytes!("../OxideDex_logo.png");
+
+/*pub async fn display_logo() {
+    display_sprite(bytes::Bytes::from_static(LOGO_BYTES));
+}*/
+
 async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
     match reqwest::get(url).await {
         Ok(response) => match response.bytes().await {
@@ -43,7 +49,7 @@ fn display_sprite(bytes: bytes::Bytes) {
             };
             let _ = viuer::print(&image::DynamicImage::from(padded), &config);
         }
-        Err(e) => eprintln!("Could not decode sprite: {}", e),
+        Err(e) => eprintln!("Could not decode image: {}", e),
     }
 }
 
@@ -61,19 +67,21 @@ fn visible_len(s: &str) -> usize {
 
 fn build_stat_lines(stats: &[rustemon::model::pokemon::PokemonStat], total: i64) -> Vec<String> {
     const BAR_WIDTH: usize = 20;
+    const INNER: usize = 7 + 1 + 3 + 2 + 1 + BAR_WIDTH + 1; // content width = 35
+    let sep = "=".repeat(INNER + 3);
     let mut lines = vec![
-        "Base Stats:".to_string(),
-        "============".to_string(),
+        sep.clone(),
+        format!("| {:<width$}|", "Base Stats", width = INNER),
     ];
     for s in stats {
         let name = format_stat_name(&s.stat.name);
         let value = s.base_stat;
-        let bar_len = (value as f32 / 255.0 * BAR_WIDTH as f32) as usize;
+        let bar_len = ((value as f32 / 180.0 * BAR_WIDTH as f32) as usize).min(BAR_WIDTH);
         let bar = "#".repeat(bar_len);
-        lines.push(format!("{:<7} {:>3}  [{:<20}]", name, value, bar));
+        lines.push(format!("| {:<7} {:>3}  [{:<bw$}]|", name, value, bar, bw = BAR_WIDTH));
     }
-    lines.push("___".to_string());
-    lines.push(format!("BST: {}", total));
+    lines.push(format!("| {:<width$}|", format!("BST:  {}", total), width = INNER));
+    lines.push(sep);
     lines
 }
 
@@ -127,6 +135,7 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) {
             let base_stat_total: i64 = p.stats.iter().map(|s| s.base_stat).sum();
             let stat_lines = build_stat_lines(&p.stats, base_stat_total);
 
+            // Two-column layout
             const GAP: usize = 2;
             let max_lines = info_lines.len().max(stat_lines.len());
             for i in 0..max_lines {

@@ -14,6 +14,7 @@ async fn main() {
 
     if args.len() == 2 {
         let pokemon_name = args[1].to_lowercase();
+        //display_logo().await;
         display_pokemon_data(&pokemon_name, &client).await;
     } else {
         eprintln!("Usage: OxideDex <pokemon name or id>");

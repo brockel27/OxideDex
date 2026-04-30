@@ -62,3 +62,10 @@
 ## 4/21/26
 - created dedicated stat bar function
 - stats and info now displayed side-by-side
+
+## 4/24/26
+- fixed stat display box
+
+## 4/29/26
+- created logo and uploaded to repo
+- printed logo to console but it looks kinda bad
