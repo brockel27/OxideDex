@@ -53,34 +53,28 @@ fn display_sprite(bytes: bytes::Bytes) {
     }
 }
 
-// ANSI escape bytes in colored strings would inflate a naive `.len()`.
-fn visible_len(s: &str) -> usize {
-    let mut len = 0;
-    let mut in_escape = false;
-    for c in s.chars() {
-        if c == '\x1b' { in_escape = true; }
-        else if in_escape { if c == 'm' { in_escape = false; } }
-        else { len += 1; }
-    }
-    len
-}
 
 fn build_stat_lines(stats: &[rustemon::model::pokemon::PokemonStat], total: i64) -> Vec<String> {
     const BAR_WIDTH: usize = 20;
     const INNER: usize = 7 + 1 + 3 + 2 + 1 + BAR_WIDTH + 1; // content width = 35
-    let sep = "=".repeat(INNER + 3);
+    let sep = "=".repeat(INNER + 4);
+
     let mut lines = vec![
         sep.clone(),
-        format!("| {:<width$}|", "Base Stats", width = INNER),
+        format!("| {:<width$} |", "Base Stats", width = INNER),
     ];
+
     for s in stats {
         let name = format_stat_name(&s.stat.name);
-        let value = s.base_stat;
+        let symbol = "#";
+        let value: i64 = s.base_stat;
         let bar_len = ((value as f32 / 180.0 * BAR_WIDTH as f32) as usize).min(BAR_WIDTH);
-        let bar = "#".repeat(bar_len);
-        lines.push(format!("| {:<7} {:>3}  [{:<bw$}]|", name, value, bar, bw = BAR_WIDTH));
+        let bar = colorize_line(&symbol.repeat(bar_len), &value);
+        let padding = " ".repeat(BAR_WIDTH - bar_len);
+        lines.push(format!("| {:<7} {:>3}  [{}{}] |", name, value, bar, padding));
     }
-    lines.push(format!("| {:<width$}|", format!("BST:  {}", total), width = INNER));
+
+    lines.push(format!("| {:<width$} |", format!("BST:  {}", total), width = INNER));
     lines.push(sep);
     lines
 }
@@ -124,19 +118,19 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) {
             ].iter().copied().max().unwrap_or(10).max(12);
 
             let info_width = 14 + value_width;
-            let sep = "=".repeat(info_width);
+            let sep = "=".repeat(info_width + 1);
             let types_pad = " ".repeat(value_width.saturating_sub(types_vis));
 
             let info_lines: Vec<String> = vec![
                 sep.clone(),
-                format!("| Name:       {:<w$}|", formatted_name,             w = value_width),
-                format!("| Dex No:     {:<w$}|", format!("#{}", p.id), w = value_width),
-                format!("| Height:     {:<w$}|", format!("{} m", height_in_meters), w = value_width),
-                format!("| Weight:     {:<w$}|", format!("{} kg", weight_in_kg),    w = value_width),
-                format!("| Types:      {}{}|", types_str, types_pad),
-                format!("| Abilities:  {:<w$}|", abilities_list,              w = value_width),
-                format!("| Generation: {:<w$}|", generation_str,  w = value_width),
-                format!("| {:<w$}|", "",                           w = value_width + 12),
+                format!("| Name:       {:<w$} |", formatted_name,             w = value_width),
+                format!("| Dex No:     {:<w$} |", format!("#{}", p.id), w = value_width),
+                format!("| Height:     {:<w$} |", format!("{} m", height_in_meters), w = value_width),
+                format!("| Weight:     {:<w$} |", format!("{} kg", weight_in_kg),    w = value_width),
+                format!("| Types:      {}{} |", types_str, types_pad),
+                format!("| Abilities:  {:<w$} |", abilities_list,              w = value_width),
+                format!("| Generation: {:<w$} |", generation_str,  w = value_width),
+                format!("| {:<w$} |", "",                           w = value_width + 12),
                 sep,
             ];
 

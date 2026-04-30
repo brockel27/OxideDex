@@ -70,3 +70,6 @@
 - created logo and uploaded to repo
 - printed logo to console but it looks kinda bad
 - add generation and dex no to display
+
+## 4/30/26
+- colorized type lines based on stat value and improved UI readability

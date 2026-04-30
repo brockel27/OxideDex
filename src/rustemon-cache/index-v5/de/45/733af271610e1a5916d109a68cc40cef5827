@@ -1,3 +1,4 @@
 
 7b31e56d9ceb8322b993aac82b18f4de0080799a8bf178a35324aa7566b42fd8	{"key":"GET:https://pokeapi.co/api/v2/pokemon/1","integrity":"sha256-p8ote+ApOw39D7KCX1JNLC69iNjvND8Gcpsbo4AYYzo=","time":1776141043015,"size":272383,"metadata":null,"raw_metadata":null}
 10a8d1b5aa7af480c61cfc780bb6e6282af161dad5cd6f72bc2c4d3b079faea5	{"key":"GET:https://pokeapi.co/api/v2/pokemon/1","integrity":"sha256-mvIVFUSOPGwzJnuiYuHMgTK84QRtFTkFsEfW2lq27vM=","time":1776316705304,"size":272444,"metadata":null,"raw_metadata":null}
+7a065d5439f8d6235e85119c9089213011f04362d22d5d46e9b91412e7977877	{"key":"GET:https://pokeapi.co/api/v2/pokemon/1","integrity":"sha256-x5uj3zGrdsfQUM5krPj+ty9xjTeNrS/xcnAMQD54xs0=","time":1777548100728,"size":272444,"metadata":null,"raw_metadata":null}

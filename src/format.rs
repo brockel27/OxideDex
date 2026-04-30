@@ -2,6 +2,22 @@ use rustemon::model::pokemon::Pokemon;
 use colored::*;
 use image::{DynamicImage, GenericImageView};
 
+pub fn colorize_line(stat_line: &str, stat_value: &i64) -> ColoredString {
+    // 30 -> 60 = orange
+    // 60 -> 80 = yellow
+    // 80 -> 100 = light green
+    // 100 -> 120 = darker green
+    // 120 -> 150+ = teal
+    match stat_value {
+        30..60 => stat_line.truecolor(255, 135, 0).bold(),
+        60..80 => stat_line.yellow().bold(),
+        80..100 => stat_line.truecolor(166, 195, 25).bold(),
+        100..120 => stat_line.green().bold(),
+        100..=255 => stat_line.cyan().bold(),
+        _ => stat_line.normal(),
+    }
+}
+
 pub fn colorize_type(type_name: &str) -> ColoredString {
     let formatted = format_name(type_name);
     match type_name.to_lowercase().as_str() {
@@ -24,6 +40,19 @@ pub fn colorize_type(type_name: &str) -> ColoredString {
         "fairy" => formatted.truecolor(214, 133, 173).bold(),
         _ => formatted.normal(),
     }
+}
+
+// Helper function to format colored Pokemon type name
+// ANSI escape bytes in colored strings would inflate a naive `.len()`
+pub fn visible_len(s: &str) -> usize {
+    let mut len = 0;
+    let mut in_escape = false;
+    for c in s.chars() {
+        if c == '\x1b' { in_escape = true; }
+        else if in_escape { if c == 'm' { in_escape = false; } }
+        else { len += 1; }
+    }
+    len
 }
 
 pub fn types_to_string(p: &Pokemon) -> String {
