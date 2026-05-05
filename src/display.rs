@@ -1,4 +1,6 @@
 use crate::format::*;
+use crate::type_matchup::type_hash;
+
 use rustemon::client::RustemonClient;
 use rustemon::model::pokemon::Pokemon;
 use rustemon::pokemon::{pokemon, pokemon_species};
@@ -55,8 +57,8 @@ fn display_sprite(bytes: bytes::Bytes) {
 fn build_stat_lines(stats: &[rustemon::model::pokemon::PokemonStat], total: i64) -> Vec<String> {
     const BAR_WIDTH: usize = 20;
     const INNER: usize = 7 + 1 + 3 + 2 + 1 + BAR_WIDTH + 1; // content width = 35
-    let eq   = "=".truecolor(180, 70, 0).to_string();
-    let pipe = "|".truecolor(180, 70, 0).to_string();
+    let eq   = "=".red().to_string();
+    let pipe = "|".red().to_string();
     let sep  = eq.repeat(INNER + 4);
 
     let mut lines = vec![
@@ -109,8 +111,8 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient) -> Vec<
     ].iter().copied().max().unwrap_or(10).max(12);
 
     let info_width = 14 + value_width;
-    let eq   = "=".truecolor(180, 70, 0).to_string();
-    let pipe = "|".truecolor(180, 70, 0).to_string();
+    let eq   = "=".red().to_string();
+    let pipe = "|".red().to_string();
     let sep  = eq.repeat(info_width + 1);
     let types_pad = " ".repeat(value_width.saturating_sub(types_vis));
 
@@ -158,18 +160,15 @@ pub async fn print_pokemon_info(p: &Pokemon, client: &RustemonClient) {
 }
 
 // Fetches a Pokémon by name, renders its sprite, and prints its info.
-pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) {
-    match pokemon::get_by_name(pokemon_name, client).await {
-        Ok(p) => {
-            if let Some(url) = p.sprites.front_default.as_deref() {
-                if let Some(bytes) = fetch_sprite(url).await {
-                    display_sprite(bytes);
-                }
-            }
-            print_pokemon_info(&p, client).await;
-        }
-        Err(error) => {
-            eprintln!("Error: Could not find '{}'. ({})", pokemon_name, error);
+pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) -> Result<(), String> {
+    let p = pokemon::get_by_name(pokemon_name, client).await
+        .map_err(|e| format!("Could not find '{}'. ({})", pokemon_name, e))?;
+    if let Some(url) = p.sprites.front_default.as_deref() {
+        if let Some(bytes) = fetch_sprite(url).await {
+            display_sprite(bytes);
         }
     }
+    print_pokemon_info(&p, client).await;
+    type_hash(&p, client);
+    Ok(())
 }
