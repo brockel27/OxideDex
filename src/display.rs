@@ -1,5 +1,5 @@
 use crate::format::*;
-use crate::type_matchup::type_hash;
+use crate::type_matchup::{type_hash, print_type_matchup};
 
 use rustemon::client::RustemonClient;
 use rustemon::model::pokemon::Pokemon;
@@ -169,6 +169,7 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) -
         }
     }
     print_pokemon_info(&p, client).await;
-    type_hash(&p, client);
+    let matchup = type_hash(&p, client).await;
+    print_type_matchup(&matchup);
     Ok(())
 }
