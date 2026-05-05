@@ -47,7 +47,7 @@ async fn load_sprite(url: &str) -> Option<RgbaImage> {
 
 // Composites two sprites side-by-side with a divider strip and renders the result centered within text_width columns.
 fn render_composite(a: RgbaImage, b: RgbaImage, text_width: usize) {
-    const GAP: u32 = 2;
+    const GAP: u32 = 12;
     let (a, b) = scale_to_fit(a, b, GAP, MAX_CANVAS_W);
     let canvas_w = a.width() + GAP + b.width();
     let max_h = a.height().max(b.height());
@@ -55,12 +55,6 @@ fn render_composite(a: RgbaImage, b: RgbaImage, text_width: usize) {
 
     image::imageops::overlay(&mut canvas, &a, 0, (max_h - a.height()) as i64);
     image::imageops::overlay(&mut canvas, &b, (a.width() + GAP) as i64, (max_h - b.height()) as i64);
-
-    for y in 0..max_h {
-        for x in a.width()..(a.width() + GAP) {
-            canvas.put_pixel(x, y, image::Rgba([180, 70, 0, 255]));
-        }
-    }
 
     let x_offset = (text_width as u32).saturating_sub(canvas_w) / 2;
     let config = viuer::Config {
@@ -114,7 +108,7 @@ pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonCli
         let left  = display_lines_a.get(i).map(|s| s.as_str()).unwrap_or("");
         let right = display_lines_b.get(i).map(|s| s.as_str()).unwrap_or("");
         let pad = " ".repeat(col_w_a.saturating_sub(visible_len(left)) + COL_GAP);
-        let line = format!("{}{}{}  {}", left, pad, "|".truecolor(180, 70, 0), right);
+        let line = format!("{}{}{}  {}", left, pad, "|".truecolor(120, 115, 110), right);
         println!("{}", border_row(&line, text_width));
     }
 
@@ -123,7 +117,7 @@ pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonCli
         let left  = matchup_lines_a.get(i).map(|s| s.as_str()).unwrap_or("");
         let right = matchup_lines_b.get(i).map(|s| s.as_str()).unwrap_or("");
         let pad = " ".repeat(col_w_a.saturating_sub(visible_len(left)) + COL_GAP);
-        let line = format!("{}{}{}  {}", left, pad, "|".truecolor(180, 70, 0), right);
+        let line = format!("{}{}{}  {}", left, pad, "|".truecolor(120, 115, 110), right);
         println!("{}", border_row(&line, text_width));
     }
 
