@@ -83,7 +83,7 @@ fn build_stat_lines(stats: &[rustemon::model::pokemon::PokemonStat], total: i64)
     lines
 }
 
-pub async fn print_pokemon_info(p: &Pokemon, client: &RustemonClient) {
+pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient) -> Vec<String> {
     let generation_str = match pokemon_species::get_by_name(&p.species.name, client).await {
         Ok(species) => format_generation(&species.generation.name),
         Err(_) => String::from("Unknown"),
@@ -134,19 +134,27 @@ pub async fn print_pokemon_info(p: &Pokemon, client: &RustemonClient) {
 
     const GAP: usize = 2;
     let max_lines = info_lines.len().max(stat_lines.len());
+    let mut lines = Vec::with_capacity(max_lines);
 
     for i in 0..max_lines {
-        match (info_lines.get(i), stat_lines.get(i)) {
+        let line = match (info_lines.get(i), stat_lines.get(i)) {
             (Some(left), Some(right)) => {
                 let pad = " ".repeat(info_width + GAP - visible_len(left));
-                println!("{}{}{}", left, pad, right);
+                format!("{}{}{}", left, pad, right)
             }
-            (Some(left), None) => println!("{}", left),
-            (None, Some(right)) => {
-                println!("{:>width$}{}", "", right, width = info_width + GAP);
-            }
-            (None, None) => {}
-        }
+            (Some(left), None) => left.clone(),
+            (None, Some(right)) => format!("{:>width$}{}", "", right, width = info_width + GAP),
+            (None, None) => String::new(),
+        };
+        lines.push(line);
+    }
+
+    lines
+}
+
+pub async fn print_pokemon_info(p: &Pokemon, client: &RustemonClient) {
+    for line in pokemon_display_lines(p, client).await {
+        println!("{}", line);
     }
 }
 

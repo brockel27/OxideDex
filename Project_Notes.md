@@ -73,3 +73,7 @@
 
 ## 4/30/26
 - colorized type lines based on stat value and improved UI readability
+
+## 5/4/26
+- created dual_display.rs
+- implemented dual display, need to fix resolution issue
