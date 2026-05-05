@@ -1,7 +1,9 @@
 mod display;
+mod dual_display;
 mod format;
 
-use crate::display::*;
+use crate::display::display_pokemon_data;
+use crate::dual_display::display_dual;
 use colored::*;
 use rustemon::client::RustemonClient;
 use std::env;
@@ -12,12 +14,15 @@ async fn main() {
     let args: Vec<String> = env::args().collect();
     let client = RustemonClient::default();
 
-    if args.len() == 2 {
+    if args.len() == 3 {
+        let pokemon_a = args[1].to_lowercase();
+        let pokemon_b = args[2].to_lowercase();
+        display_dual(&pokemon_a, &pokemon_b, &client).await;
+    } else if args.len() == 2 {
         let pokemon_name = args[1].to_lowercase();
-        //display_logo().await;
         display_pokemon_data(&pokemon_name, &client).await;
     } else {
-        eprintln!("Usage: OxideDex <pokemon name or id>");
+        eprintln!("Usage: OxideDex <pokemon> [<pokemon2>]");
     }
 }
 

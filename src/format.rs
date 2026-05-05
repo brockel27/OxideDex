@@ -2,6 +2,7 @@ use rustemon::model::pokemon::Pokemon;
 use colored::*;
 use image::{DynamicImage, GenericImageView};
 
+// Colorize stat lines based on stat values
 pub fn colorize_line(stat_line: &str, stat_value: &i64) -> ColoredString {
     // 30 -> 60 = orange
     // 60 -> 80 = yellow
@@ -18,6 +19,7 @@ pub fn colorize_line(stat_line: &str, stat_value: &i64) -> ColoredString {
     }
 }
 
+// Colorize type names (may not work on some terminals)
 pub fn colorize_type(type_name: &str) -> ColoredString {
     let formatted = format_name(type_name);
     match type_name.to_lowercase().as_str() {
@@ -63,6 +65,7 @@ pub fn types_to_string(p: &Pokemon) -> String {
         .join(", ")
 }
 
+// Most names are orignally lowercase and hyphenated
 pub fn format_name(name: &str) -> String {
     name.split('-')
         .map(|word| {
