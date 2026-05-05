@@ -1,5 +1,5 @@
-use crate::display::{fetch_sprite, pokemon_display_lines, border_top, border_bottom, border_row};
-use crate::format::{is_col_transparent, is_row_transparent, visible_len};
+use crate::display::{fetch_sprite, pokemon_display_lines};
+use crate::format::{border_bottom, border_row, border_top, is_col_transparent, is_row_transparent, visible_len};
 use crate::type_matchup::type_hash;
 use crate::type_matchup::build_type_matchup_lines;
 

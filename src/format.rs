@@ -95,6 +95,33 @@ pub fn format_generation(gen_name: &str) -> String {
         .unwrap_or_else(|| format_name(gen_name))
 }
 
+const BCLR: (u8, u8, u8) = (180, 70, 0);
+
+// Returns the top border line of the outer display frame.
+pub fn border_top(inner_w: usize) -> String {
+    format!("{}{}{}",
+        "╔".truecolor(BCLR.0, BCLR.1, BCLR.2),
+        "═".repeat(inner_w + 2).truecolor(BCLR.0, BCLR.1, BCLR.2),
+        "╗".truecolor(BCLR.0, BCLR.1, BCLR.2))
+}
+
+// Returns the bottom border line of the outer display frame.
+pub fn border_bottom(inner_w: usize) -> String {
+    format!("{}{}{}",
+        "╚".truecolor(BCLR.0, BCLR.1, BCLR.2),
+        "═".repeat(inner_w + 2).truecolor(BCLR.0, BCLR.1, BCLR.2),
+        "╝".truecolor(BCLR.0, BCLR.1, BCLR.2))
+}
+
+// Wraps a content string with side borders, padding to inner_w visible columns.
+pub fn border_row(content: &str, inner_w: usize) -> String {
+    let pad = " ".repeat(inner_w.saturating_sub(visible_len(content)));
+    format!("{} {}{} {}",
+        "║".truecolor(BCLR.0, BCLR.1, BCLR.2),
+        content, pad,
+        "║".truecolor(BCLR.0, BCLR.1, BCLR.2))
+}
+
 // Returns true if every pixel in row y of the image is fully transparent.
 pub fn is_row_transparent(img: &DynamicImage, y: u32) -> bool {
     (0..img.width()).all(|x| img.get_pixel(x, y).0[3] == 0)

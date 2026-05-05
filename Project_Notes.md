@@ -77,3 +77,6 @@
 ## 5/4/26
 - created dual_display.rs
 - implemented dual display, need to fix resolution issue
+
+## 5/5/26
+- restarted type matchup implementation

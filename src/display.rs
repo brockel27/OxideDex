@@ -7,33 +7,6 @@ use rustemon::pokemon::{pokemon, pokemon_species};
 use std::io::Cursor;
 use colored::Colorize;
 
-const BCLR: (u8, u8, u8) = (180, 70, 0);
-
-// Prints the top border of the outer display frame.
-pub(crate) fn border_top(inner_w: usize) -> String {
-    format!("{}{}{}",
-        "╔".truecolor(BCLR.0, BCLR.1, BCLR.2),
-        "═".repeat(inner_w + 2).truecolor(BCLR.0, BCLR.1, BCLR.2),
-        "╗".truecolor(BCLR.0, BCLR.1, BCLR.2))
-}
-
-// Prints the bottom border of the outer display frame.
-pub(crate) fn border_bottom(inner_w: usize) -> String {
-    format!("{}{}{}",
-        "╚".truecolor(BCLR.0, BCLR.1, BCLR.2),
-        "═".repeat(inner_w + 2).truecolor(BCLR.0, BCLR.1, BCLR.2),
-        "╝".truecolor(BCLR.0, BCLR.1, BCLR.2))
-}
-
-// Wraps a content string with side borders, padding to inner_w visible columns.
-pub(crate) fn border_row(content: &str, inner_w: usize) -> String {
-    let pad = " ".repeat(inner_w.saturating_sub(visible_len(content)));
-    format!("{} {}{} {}",
-        "║".truecolor(BCLR.0, BCLR.1, BCLR.2),
-        content, pad,
-        "║".truecolor(BCLR.0, BCLR.1, BCLR.2))
-}
-
 // Downloads raw PNG sprite bytes from a URL.
 pub(crate) async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
     match reqwest::get(url).await {
