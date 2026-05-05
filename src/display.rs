@@ -4,12 +4,6 @@ use rustemon::model::pokemon::Pokemon;
 use rustemon::pokemon::{pokemon, pokemon_species};
 use std::io::Cursor;
 
-//const LOGO_BYTES: &[u8] = include_bytes!("../OxideDex_logo.png");
-
-/*pub async fn display_logo() {
-    display_sprite(bytes::Bytes::from_static(LOGO_BYTES));
-}*/
-
 // One-time fetch to pass to display function
 async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
     match reqwest::get(url).await {
@@ -22,16 +16,15 @@ async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
 }
 
 // Displaying all sprites nicely requres some formatting and padding
-// *****
 fn display_sprite(bytes: bytes::Bytes) {
     match image::load(Cursor::new(bytes), image::ImageFormat::Png) {
         Ok(img) => {
             let (mut top, mut bottom) = (0, img.height() - 1);
             let (mut left, mut right) = (0, img.width() - 1);
-            while top < bottom && is_transparent(&img, top, true) { top += 1; }
-            while bottom > top && is_transparent(&img, bottom, true) { bottom -= 1; }
-            while left < right && is_transparent(&img, left, false) { left += 1; }
-            while right > left && is_transparent(&img, right, false) { right -= 1; }
+            while top < bottom && is_row_transparent(&img, top) { top += 1; }
+            while bottom > top && is_row_transparent(&img, bottom) { bottom -= 1; }
+            while left < right && is_col_transparent(&img, left) { left += 1; }
+            while right > left && is_col_transparent(&img, right) { right -= 1; }
             let trimmed = img.crop_imm(left, top, right - left + 1, bottom - top + 1);
 
             // Transparent border prevents bilinear resize from blending edge pixels, causing fringe.

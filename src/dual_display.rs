@@ -1,5 +1,5 @@
 use crate::display::pokemon_display_lines;
-use crate::format::{is_transparent, visible_len};
+use crate::format::{is_col_transparent, is_row_transparent, visible_len};
 use colored::Colorize;
 use image::{ImageBuffer, RgbaImage};
 use rustemon::client::RustemonClient;
@@ -14,10 +14,10 @@ fn format_sprite(bytes: bytes::Bytes) -> Result<RgbaImage, image::ImageError> {
 
     let (mut top, mut bottom) = (0, img.height() - 1);
     let (mut left, mut right) = (0, img.width() - 1);
-    while top < bottom && is_transparent(&img, top, true) { top += 1; }
-    while bottom > top && is_transparent(&img, bottom, true) { bottom -= 1; }
-    while left < right && is_transparent(&img, left, false) { left += 1; }
-    while right > left && is_transparent(&img, right, false) { right -= 1; }
+    while top < bottom && is_row_transparent(&img, top) { top += 1; }
+    while bottom > top && is_row_transparent(&img, bottom) { bottom -= 1; }
+    while left < right && is_col_transparent(&img, left) { left += 1; }
+    while right > left && is_col_transparent(&img, right) { right -= 1; }
     let trimmed = img.crop_imm(left, top, right - left + 1, bottom - top + 1);
 
     let pad = 4u32;

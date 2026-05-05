@@ -2,50 +2,42 @@ use rustemon::model::pokemon::Pokemon;
 use colored::*;
 use image::{DynamicImage, GenericImageView};
 
-// Colorize stat lines based on stat values
 pub fn colorize_line(stat_line: &str, stat_value: &i64) -> ColoredString {
-    // 30 -> 60 = orange
-    // 60 -> 80 = yellow
-    // 80 -> 100 = light green
-    // 100 -> 120 = darker green
-    // 120 -> 150+ = teal
     match stat_value {
-        30..60 => stat_line.truecolor(255, 135, 0).bold(),
-        60..80 => stat_line.yellow().bold(),
-        80..100 => stat_line.truecolor(166, 195, 25).bold(),
+        30..60   => stat_line.truecolor(255, 135, 0).bold(),
+        60..80   => stat_line.yellow().bold(),
+        80..100  => stat_line.truecolor(166, 195, 25).bold(),
         100..120 => stat_line.green().bold(),
-        100..=255 => stat_line.cyan().bold(),
+        120..=255 => stat_line.cyan().bold(),
         _ => stat_line.normal(),
     }
 }
 
-// Colorize type names (may not work on some terminals)
 pub fn colorize_type(type_name: &str) -> ColoredString {
     let formatted = format_name(type_name);
     match type_name.to_lowercase().as_str() {
-        "fire" => formatted.red().bold(),
-        "water" => formatted.blue().bold(),
-        "grass" => formatted.green().bold(),
+        "fire"     => formatted.red().bold(),
+        "water"    => formatted.blue().bold(),
+        "grass"    => formatted.green().bold(),
         "electric" => formatted.yellow().bold(),
-        "ice" => formatted.cyan().bold(),
-        "poison" => formatted.magenta().bold(),
+        "ice"      => formatted.cyan().bold(),
+        "poison"   => formatted.magenta().bold(),
         "fighting" => formatted.truecolor(255, 128, 0).bold(),
-        "ground" => formatted.truecolor(226, 191, 101).bold(),
-        "flying" => formatted.truecolor(184, 143, 243).bold(),
-        "psychic" => formatted.truecolor(249, 85, 135).bold(),
-        "bug" => formatted.truecolor(166, 185, 26).bold(),
-        "rock" => formatted.truecolor(182, 161, 54).bold(),
-        "ghost" => formatted.truecolor(115, 87, 151).bold(),
-        "dragon" => formatted.truecolor(111, 53, 252).bold(),
-        "dark" => formatted.truecolor(112, 87, 70).bold(),
-        "steel" => formatted.truecolor(183, 183, 206).bold(),
-        "fairy" => formatted.truecolor(214, 133, 173).bold(),
-        _ => formatted.normal(),
+        "ground"   => formatted.truecolor(226, 191, 101).bold(),
+        "flying"   => formatted.truecolor(184, 143, 243).bold(),
+        "psychic"  => formatted.truecolor(249, 85, 135).bold(),
+        "bug"      => formatted.truecolor(166, 185, 26).bold(),
+        "rock"     => formatted.truecolor(182, 161, 54).bold(),
+        "ghost"    => formatted.truecolor(115, 87, 151).bold(),
+        "dragon"   => formatted.truecolor(111, 53, 252).bold(),
+        "dark"     => formatted.truecolor(112, 87, 70).bold(),
+        "steel"    => formatted.truecolor(183, 183, 206).bold(),
+        "fairy"    => formatted.truecolor(214, 133, 173).bold(),
+        _          => formatted.normal(),
     }
 }
 
-// Helper function to format colored Pokemon type name
-// ANSI escape bytes in colored strings would inflate a naive `.len()`
+// ANSI escape bytes inflate a naive `.len()`
 pub fn visible_len(s: &str) -> usize {
     let mut len = 0;
     let mut in_escape = false;
@@ -65,7 +57,7 @@ pub fn types_to_string(p: &Pokemon) -> String {
         .join(", ")
 }
 
-// Most names are orignally lowercase and hyphenated
+// PokeAPI names are lowercase and hyphen-separated
 pub fn format_name(name: &str) -> String {
     name.split('-')
         .map(|word| {
@@ -94,14 +86,14 @@ pub fn format_stat_name(name: &str) -> String {
 pub fn format_generation(gen_name: &str) -> String {
     gen_name
         .strip_prefix("generation-")
-        .map(|roman| format!("{}", roman.to_uppercase()))
+        .map(|roman| roman.to_uppercase())
         .unwrap_or_else(|| format_name(gen_name))
 }
 
-pub fn is_transparent(img: &DynamicImage, start: u32, is_row: bool) -> bool {
-    if is_row {
-        (0..img.width()).all(|x| img.get_pixel(x, start).0[3] == 0)
-    } else {
-        (0..img.height()).all(|y| img.get_pixel(start, y).0[3] == 0)
-    }
+pub fn is_row_transparent(img: &DynamicImage, y: u32) -> bool {
+    (0..img.width()).all(|x| img.get_pixel(x, y).0[3] == 0)
+}
+
+pub fn is_col_transparent(img: &DynamicImage, x: u32) -> bool {
+    (0..img.height()).all(|y| img.get_pixel(x, y).0[3] == 0)
 }
