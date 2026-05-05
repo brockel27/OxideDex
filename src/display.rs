@@ -1,5 +1,5 @@
 use crate::format::*;
-use crate::type_matchup::{type_hash, print_type_matchup};
+use crate::type_matchup::{type_hash, build_type_matchup_lines};
 
 use rustemon::client::RustemonClient;
 use rustemon::model::pokemon::Pokemon;
@@ -152,13 +152,6 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient) -> Vec<
     lines
 }
 
-// Prints the formatted Pokémon info and stat lines to stdout.
-pub async fn print_pokemon_info(p: &Pokemon, client: &RustemonClient) {
-    for line in pokemon_display_lines(p, client).await {
-        println!("{}", line);
-    }
-}
-
 // Fetches a Pokémon by name, renders its sprite, and prints its info.
 pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) -> Result<(), String> {
     let p = pokemon::get_by_name(pokemon_name, client).await
@@ -168,8 +161,17 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) -
             display_sprite(bytes);
         }
     }
-    print_pokemon_info(&p, client).await;
+    let display_lines = pokemon_display_lines(&p, client).await;
     let matchup = type_hash(&p, client).await;
-    print_type_matchup(&matchup);
+    let matchup_lines = build_type_matchup_lines(&matchup);
+
+    let col_w = display_lines.iter().map(|l| visible_len(l)).max().unwrap_or(0);
+    let max_lines = display_lines.len().max(matchup_lines.len());
+    for i in 0..max_lines {
+        let left  = display_lines.get(i).map(|s| s.as_str()).unwrap_or("");
+        let right = matchup_lines.get(i).map(|s| s.as_str()).unwrap_or("");
+        let pad = " ".repeat(col_w.saturating_sub(visible_len(left)) + 2);
+        println!("{}{}{}", left, pad, right);
+    }
     Ok(())
 }

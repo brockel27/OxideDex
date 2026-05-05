@@ -54,8 +54,8 @@ fn colorize_multiplier(mult: f32) -> ColoredString {
     else                 { s.normal() }
 }
 
-// Prints a 3×6 bordered grid of all 18 types with color-coded damage multipliers.
-pub fn print_type_matchup(matchup: &HashMap<String, f32>) {
+// Builds a 3×6 bordered grid of all 18 types with color-coded damage multipliers as printable lines.
+pub fn build_type_matchup_lines(matchup: &HashMap<String, f32>) -> Vec<String> {
     const COLS: usize = 3;
     const ROWS: usize = 6;
     // visible cell width: "| " (2) + name padded to 9 + " " (1) + mult (2) + " " (1) = 15
@@ -65,9 +65,11 @@ pub fn print_type_matchup(matchup: &HashMap<String, f32>) {
     let pipe = "|".red().to_string();
     let sep  = eq.repeat(TOTAL_W);
 
-    println!("{}", sep);
-    println!("{} {:<w$} {}", pipe, "Type Effectiveness", pipe, w = TOTAL_W - 4);
-    println!("{}", sep);
+    let mut lines = vec![
+        sep.clone(),
+        format!("{} {:<w$} {}", pipe, "Type Effectiveness", pipe, w = TOTAL_W - 4),
+        sep.clone(),
+    ];
 
     for row in 0..ROWS {
         let mut line = String::new();
@@ -86,8 +88,9 @@ pub fn print_type_matchup(matchup: &HashMap<String, f32>) {
             line.push(' ');
         }
         line.push_str(&pipe);
-        println!("{}", line);
+        lines.push(line);
     }
 
-    println!("{}", sep);
+    lines.push(sep);
+    lines
 }
