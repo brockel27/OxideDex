@@ -18,8 +18,9 @@ pub(crate) async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
     }
 }
 
-// Trims transparent borders, re-pads, and renders a sprite inline in the terminal.
-fn display_sprite(bytes: bytes::Bytes) {
+// Trims transparent borders, re-pads, and renders a sprite inline in the terminal centered within text_width columns.
+fn display_sprite(bytes: bytes::Bytes, text_width: usize) {
+    const RENDER_WIDTH: u32 = 128;
     match image::load(Cursor::new(bytes), image::ImageFormat::Png) {
         Ok(img) => {
             let (mut top, mut bottom) = (0, img.height() - 1);
@@ -39,10 +40,12 @@ fn display_sprite(bytes: bytes::Bytes) {
             );
             image::imageops::overlay(&mut padded, &trimmed_rgba, pad as i64, pad as i64);
 
+            let x_offset = (text_width as u32).saturating_sub(RENDER_WIDTH) / 2;
             let config = viuer::Config {
                 transparent: true,
                 absolute_offset: false,
-                width: Some(128),
+                x: x_offset as u16,
+                width: Some(RENDER_WIDTH),
                 use_kitty: false,
                 use_iterm: false,
                 ..Default::default()
@@ -156,22 +159,24 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient) -> Vec<
 pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) -> Result<(), String> {
     let p = pokemon::get_by_name(pokemon_name, client).await
         .map_err(|e| format!("Could not find '{}'. ({})", pokemon_name, e))?;
+
+    let display_lines = pokemon_display_lines(&p, client).await;
+    let col_w = display_lines.iter().map(|l| visible_len(l)).max().unwrap_or(0);
+
+    let matchup = type_hash(&p, client).await;
+    let matchup_lines = build_type_matchup_lines(&matchup, col_w);
+
     if let Some(url) = p.sprites.front_default.as_deref() {
         if let Some(bytes) = fetch_sprite(url).await {
-            display_sprite(bytes);
+            display_sprite(bytes, col_w);
         }
     }
-    let display_lines = pokemon_display_lines(&p, client).await;
-    let matchup = type_hash(&p, client).await;
-    let matchup_lines = build_type_matchup_lines(&matchup);
 
-    let col_w = display_lines.iter().map(|l| visible_len(l)).max().unwrap_or(0);
-    let max_lines = display_lines.len().max(matchup_lines.len());
-    for i in 0..max_lines {
-        let left  = display_lines.get(i).map(|s| s.as_str()).unwrap_or("");
-        let right = matchup_lines.get(i).map(|s| s.as_str()).unwrap_or("");
-        let pad = " ".repeat(col_w.saturating_sub(visible_len(left)) + 2);
-        println!("{}{}{}", left, pad, right);
+    for line in &display_lines {
+        println!("{}", line);
+    }
+    for line in &matchup_lines {
+        println!("{}", line);
     }
     Ok(())
 }

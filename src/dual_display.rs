@@ -1,5 +1,8 @@
 use crate::display::{fetch_sprite, pokemon_display_lines};
 use crate::format::{is_col_transparent, is_row_transparent, visible_len};
+use crate::type_matchup::type_hash;
+use crate::type_matchup::build_type_matchup_lines;
+
 use colored::Colorize;
 use image::{ImageBuffer, RgbaImage};
 use rustemon::client::RustemonClient;
@@ -8,7 +11,7 @@ use std::io::Cursor;
 
 const MAX_CANVAS_W: u32 = 128;
 
-// Decodes, trims transparent border, and re-pads a PNG sprite.
+// Decodes and trims transparent border from a PNG sprite.
 fn format_sprite(bytes: bytes::Bytes) -> Result<RgbaImage, image::ImageError> {
     let img = image::load(Cursor::new(bytes), image::ImageFormat::Png)?;
 
@@ -18,17 +21,8 @@ fn format_sprite(bytes: bytes::Bytes) -> Result<RgbaImage, image::ImageError> {
     while bottom > top && is_row_transparent(&img, bottom) { bottom -= 1; }
     while left < right && is_col_transparent(&img, left) { left += 1; }
     while right > left && is_col_transparent(&img, right) { right -= 1; }
-    let trimmed = img.crop_imm(left, top, right - left + 1, bottom - top + 1);
 
-    let pad = 4u32;
-    let trimmed_rgba = trimmed.to_rgba8();
-    let mut padded = RgbaImage::new(
-        trimmed_rgba.width() + pad * 2,
-        trimmed_rgba.height() + pad * 2,
-    );
-    image::imageops::overlay(&mut padded, &trimmed_rgba, pad as i64, pad as i64);
-
-    Ok(padded)
+    Ok(img.crop_imm(left, top, right - left + 1, bottom - top + 1).to_rgba8())
 }
 
 // Proportionally downscales both sprites so their combined width fits within max_w.
@@ -51,9 +45,9 @@ async fn load_sprite(url: &str) -> Option<RgbaImage> {
     fetch_sprite(url).await.and_then(|b| format_sprite(b).ok())
 }
 
-// Composites two sprites side-by-side with a gray divider strip and renders the result inline.
-fn render_composite(a: RgbaImage, b: RgbaImage) {
-    const GAP: u32 = 4;
+// Composites two sprites side-by-side with a divider strip and renders the result centered within text_width columns.
+fn render_composite(a: RgbaImage, b: RgbaImage, text_width: usize) {
+    const GAP: u32 = 2;
     let (a, b) = scale_to_fit(a, b, GAP, MAX_CANVAS_W);
     let canvas_w = a.width() + GAP + b.width();
     let max_h = a.height().max(b.height());
@@ -64,13 +58,15 @@ fn render_composite(a: RgbaImage, b: RgbaImage) {
 
     for y in 0..max_h {
         for x in a.width()..(a.width() + GAP) {
-            canvas.put_pixel(x, y, image::Rgba([128, 128, 128, 255]));
+            canvas.put_pixel(x, y, image::Rgba([180, 70, 0, 255]));
         }
     }
 
+    let x_offset = (text_width as u32).saturating_sub(canvas_w) / 2;
     let config = viuer::Config {
         transparent: true,
         absolute_offset: false,
+        x: x_offset as u16,
         width: Some(canvas_w),
         use_kitty: false,
         use_iterm: false,
@@ -79,16 +75,23 @@ fn render_composite(a: RgbaImage, b: RgbaImage) {
     let _ = viuer::print(&image::DynamicImage::from(canvas), &config);
 }
 
-// Fetches two Pokémon, renders their sprites side-by-side, and prints their info boxes.
-pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonClient) {
-    let (pa, pb) = match (
-        pokemon::get_by_name(pokemon_a, client).await,
-        pokemon::get_by_name(pokemon_b, client).await,
-    ) {
-        (Ok(a), Ok(b)) => (a, b),
-        (Err(e), _) => { eprintln!("Error: Could not find '{}'. ({})", pokemon_a, e); return; }
-        (_, Err(e)) => { eprintln!("Error: Could not find '{}'. ({})", pokemon_b, e); return; }
-    };
+// Fetches two Pokémon, renders their sprites side-by-side, and prints their info and type matchup boxes.
+pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonClient) -> Result<(), String> {
+    let pa = pokemon::get_by_name(pokemon_a, client).await
+        .map_err(|e| format!("Could not find '{}'. ({})", pokemon_a, e))?;
+    let pb = pokemon::get_by_name(pokemon_b, client).await
+        .map_err(|e| format!("Could not find '{}'. ({})", pokemon_b, e))?;
+
+    let display_lines_a = pokemon_display_lines(&pa, client).await;
+    let display_lines_b = pokemon_display_lines(&pb, client).await;
+
+    const COL_GAP: usize = 2;
+    let col_w_a = display_lines_a.iter().map(|l| visible_len(l)).max().unwrap_or(0);
+    let col_w_b = display_lines_b.iter().map(|l| visible_len(l)).max().unwrap_or(0);
+
+    let matchup_lines_a = build_type_matchup_lines(&type_hash(&pa, client).await, col_w_a);
+    let matchup_lines_b = build_type_matchup_lines(&type_hash(&pb, client).await, col_w_b);
+    let text_width = col_w_a + COL_GAP + 1 + 2 + col_w_b;
 
     let sprite_a = match pa.sprites.front_default.as_deref() {
         Some(url) => load_sprite(url).await,
@@ -100,21 +103,24 @@ pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonCli
     };
 
     match (sprite_a, sprite_b) {
-        (Some(a), Some(b)) => render_composite(a, b),
+        (Some(a), Some(b)) => render_composite(a, b, text_width),
         _ => eprintln!("Could not load one or both sprites."),
     }
 
-    let lines_a = pokemon_display_lines(&pa, client).await;
-    let lines_b = pokemon_display_lines(&pb, client).await;
-
-    let col_w = lines_a.iter().map(|l| visible_len(l)).max().unwrap_or(0);
-    let max_lines = lines_a.len().max(lines_b.len());
-    const COL_GAP: usize = 2;
-
-    for i in 0..max_lines {
-        let left = lines_a.get(i).map(|s| s.as_str()).unwrap_or("");
-        let right = lines_b.get(i).map(|s| s.as_str()).unwrap_or("");
-        let pad = " ".repeat(col_w - visible_len(left) + COL_GAP);
+    let max_info = display_lines_a.len().max(display_lines_b.len());
+    for i in 0..max_info {
+        let left  = display_lines_a.get(i).map(|s| s.as_str()).unwrap_or("");
+        let right = display_lines_b.get(i).map(|s| s.as_str()).unwrap_or("");
+        let pad = " ".repeat(col_w_a.saturating_sub(visible_len(left)) + COL_GAP);
         println!("{}{}{}  {}", left, pad, "|".truecolor(180, 70, 0), right);
     }
+
+    let max_matchup = matchup_lines_a.len().max(matchup_lines_b.len());
+    for i in 0..max_matchup {
+        let left  = matchup_lines_a.get(i).map(|s| s.as_str()).unwrap_or("");
+        let right = matchup_lines_b.get(i).map(|s| s.as_str()).unwrap_or("");
+        let pad = " ".repeat(col_w_a.saturating_sub(visible_len(left)) + COL_GAP);
+        println!("{}{}{}  {}", left, pad, "|".truecolor(180, 70, 0), right);
+    }
+    Ok(())
 }

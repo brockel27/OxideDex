@@ -17,6 +17,7 @@ pub async fn type_hash(p: &Pokemon, client: &RustemonClient) -> HashMap<String, 
 
     for type_slot in &p.types {
         let type_data = rustemon::pokemon::type_::get_by_name(type_slot.type_.name.as_str(), client).await.unwrap();
+
         for entry in type_data.damage_relations.double_damage_from {
             if let Some(v) = p_types.get_mut(&entry.name) { *v *= 2.0; }
         }
@@ -45,8 +46,8 @@ fn format_mult(mult: f32) -> String {
 // Colors a multiplier string by effectiveness: white=immune, green=resists, grey=neutral, orange=weak, red=double weak.
 fn colorize_multiplier(mult: f32) -> ColoredString {
     let s = format_mult(mult);
-    if      mult == 0.0  { s.white().bold() }
-    else if mult == 0.25 { s.truecolor(0, 200, 80).bold() }
+    if      mult == 0.0  { s.yellow().bold() }
+    else if mult == 0.25 { s.cyan().bold() }
     else if mult == 0.5  { s.green().bold() }
     else if mult == 1.0  { s.truecolor(150, 150, 150).normal() }
     else if mult == 2.0  { s.truecolor(255, 128, 0).bold() }
@@ -55,19 +56,25 @@ fn colorize_multiplier(mult: f32) -> ColoredString {
 }
 
 // Builds a 3×6 bordered grid of all 18 types with color-coded damage multipliers as printable lines.
-pub fn build_type_matchup_lines(matchup: &HashMap<String, f32>) -> Vec<String> {
+// min_width expands the box to at least that many visible columns; pass 0 for the natural 46-column width.
+pub fn build_type_matchup_lines(matchup: &HashMap<String, f32>, min_width: usize) -> Vec<String> {
     const COLS: usize = 3;
     const ROWS: usize = 6;
     // visible cell width: "| " (2) + name padded to 9 + " " (1) + mult (2) + " " (1) = 15
-    const TOTAL_W: usize = COLS * 15 + 1;
+    const BASE_W: usize = COLS * 15 + 1;
+
+    let total_w   = min_width.max(BASE_W);
+    let extra     = total_w - BASE_W;
+    let left_pad  = extra / 2;
+    let right_pad = extra - left_pad;
 
     let eq   = "=".red().to_string();
     let pipe = "|".red().to_string();
-    let sep  = eq.repeat(TOTAL_W);
+    let sep  = eq.repeat(total_w);
 
     let mut lines = vec![
         sep.clone(),
-        format!("{} {:<w$} {}", pipe, "Type Effectiveness", pipe, w = TOTAL_W - 4),
+        format!("{} {:^w$} {}", pipe, "Type Effectiveness", pipe, w = total_w - 4),
         sep.clone(),
     ];
 
@@ -80,13 +87,14 @@ pub fn build_type_matchup_lines(matchup: &HashMap<String, f32>) -> Vec<String> {
             let name_pad = " ".repeat(9_usize.saturating_sub(visible_len(&colored_name)));
             let mult_str = colorize_multiplier(mult).to_string();
             line.push_str(&pipe);
-            line.push(' ');
+            if col == 0 { line.push_str(&" ".repeat(left_pad + 1)); } else { line.push(' '); }
             line.push_str(&colored_name);
             line.push_str(&name_pad);
             line.push(' ');
             line.push_str(&mult_str);
             line.push(' ');
         }
+        line.push_str(&" ".repeat(right_pad));
         line.push_str(&pipe);
         lines.push(line);
     }
