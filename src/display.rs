@@ -55,14 +55,13 @@ fn display_sprite(bytes: bytes::Bytes) {
 fn build_stat_lines(stats: &[rustemon::model::pokemon::PokemonStat], total: i64) -> Vec<String> {
     const BAR_WIDTH: usize = 20;
     const INNER: usize = 7 + 1 + 3 + 2 + 1 + BAR_WIDTH + 1; // content width = 35
-    let sep = "=".truecolor(180, 70, 0).repeat(INNER + 4);
-
-
-
+    let eq   = "=".truecolor(180, 70, 0).to_string();
+    let pipe = "|".truecolor(180, 70, 0).to_string();
+    let sep  = eq.repeat(INNER + 4);
 
     let mut lines = vec![
         sep.clone(),
-        format!("| {:<width$} |", "Base Stats", width = INNER),
+        format!("{} {:<width$} {}", pipe, "Base Stats", pipe, width = INNER),
     ];
 
     for s in stats {
@@ -71,10 +70,10 @@ fn build_stat_lines(stats: &[rustemon::model::pokemon::PokemonStat], total: i64)
         let bar_len = ((value as f32 / 180.0 * BAR_WIDTH as f32) as usize).min(BAR_WIDTH);
         let bar = colorize_line(&"#".repeat(bar_len), &value);
         let padding = " ".repeat(BAR_WIDTH - bar_len);
-        lines.push(format!("| {:<7} {:>3}  [{}{}] |", name, value, bar, padding));
+        lines.push(format!("{} {:<7} {:>3}  [{}{}] {}", pipe, name, value, bar, padding, pipe));
     }
 
-    lines.push(format!("| {:<width$} |", format!("BST:  {}", total), width = INNER));
+    lines.push(format!("{} {:<width$} {}", pipe, format!("BST:  {}", total), pipe, width = INNER));
     lines.push(sep);
     lines
 }
@@ -110,19 +109,21 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient) -> Vec<
     ].iter().copied().max().unwrap_or(10).max(12);
 
     let info_width = 14 + value_width;
-    let sep = "=".truecolor(180, 70, 0).repeat(info_width + 1);
+    let eq   = "=".truecolor(180, 70, 0).to_string();
+    let pipe = "|".truecolor(180, 70, 0).to_string();
+    let sep  = eq.repeat(info_width + 1);
     let types_pad = " ".repeat(value_width.saturating_sub(types_vis));
 
     let info_lines: Vec<String> = vec![
         sep.clone(),
-        format!("| Name:       {:<w$} |", formatted_name,             w = value_width),
-        format!("| Dex No:     {:<w$} |", format!("#{}", p.id),       w = value_width),
-        format!("| Height:     {:<w$} |", format!("{} m", height_in_meters), w = value_width),
-        format!("| Weight:     {:<w$} |", format!("{} kg", weight_in_kg),    w = value_width),
-        format!("| Types:      {}{} |", types_str, types_pad),
-        format!("| Abilities:  {:<w$} |", abilities_list,              w = value_width),
-        format!("| Generation: {:<w$} |", generation_str,              w = value_width),
-        format!("| {:<w$} |", "",                                      w = value_width + 12),
+        format!("{} Name:       {:<w$} {}", pipe, formatted_name,             pipe, w = value_width),
+        format!("{} Dex No:     {:<w$} {}", pipe, format!("#{}", p.id),       pipe, w = value_width),
+        format!("{} Height:     {:<w$} {}", pipe, format!("{} m", height_in_meters), pipe, w = value_width),
+        format!("{} Weight:     {:<w$} {}", pipe, format!("{} kg", weight_in_kg),    pipe, w = value_width),
+        format!("{} Types:      {}{} {}", pipe, types_str, types_pad,               pipe),
+        format!("{} Abilities:  {:<w$} {}", pipe, abilities_list,              pipe, w = value_width),
+        format!("{} Generation: {:<w$} {}", pipe, generation_str,              pipe, w = value_width),
+        format!("{} {:<w$} {}", pipe, "",                                      pipe, w = value_width + 12),
         sep,
     ];
 
