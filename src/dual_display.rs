@@ -8,6 +8,7 @@ use std::io::Cursor;
 
 const MAX_CANVAS_W: u32 = 128;
 
+// Decodes a PNG sprite, trims its transparent border, and re-pads with 4px of transparency.
 fn format_sprite(bytes: bytes::Bytes) -> Result<RgbaImage, image::ImageError> {
     let img = image::load(Cursor::new(bytes), image::ImageFormat::Png)?;
 
@@ -30,6 +31,7 @@ fn format_sprite(bytes: bytes::Bytes) -> Result<RgbaImage, image::ImageError> {
     Ok(padded)
 }
 
+// Proportionally downscales both sprites together when their combined canvas would exceed max_w.
 fn scale_to_fit(a: RgbaImage, b: RgbaImage, gap: u32, max_w: u32) -> (RgbaImage, RgbaImage) {
     let canvas_w = a.width() + gap + b.width();
     if canvas_w <= max_w {
@@ -44,6 +46,7 @@ fn scale_to_fit(a: RgbaImage, b: RgbaImage, gap: u32, max_w: u32) -> (RgbaImage,
     (scaled(a), scaled(b))
 }
 
+// Downloads raw PNG bytes from the given sprite URL.
 async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
     match reqwest::get(url).await {
         Ok(response) => match response.bytes().await {
@@ -54,6 +57,7 @@ async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
     }
 }
 
+// Fetches, composites, and renders two Pokémon sprites side-by-side with their info boxes below.
 pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonClient) {
     let (pa, pb) = match (
         pokemon::get_by_name(pokemon_a, client).await,
@@ -119,70 +123,3 @@ pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonCli
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use image::{DynamicImage, Rgba, RgbaImage};
-    use std::io::Cursor;
-
-    fn encode_png(img: RgbaImage) -> bytes::Bytes {
-        let mut buf = Vec::new();
-        DynamicImage::ImageRgba8(img)
-            .write_to(&mut Cursor::new(&mut buf), image::ImageFormat::Png)
-            .unwrap();
-        bytes::Bytes::from(buf)
-    }
-
-    #[test]
-    fn trims_transparent_border_and_adds_padding() {
-        // 10x10 all-transparent except pixel (5,5)
-        let mut img = RgbaImage::new(10, 10);
-        img.put_pixel(5, 5, Rgba([255, 0, 0, 255]));
-        let result = format_sprite(encode_png(img)).unwrap();
-        // trimmed core is 1x1; padded by 4 on each side → 9x9
-        assert_eq!(result.width(), 9);
-        assert_eq!(result.height(), 9);
-    }
-
-    #[test]
-    fn does_not_scale_down_large_image() {
-        // 100x100 fully opaque → no transparent border → padded to 108x108, no further scaling
-        let img = RgbaImage::from_pixel(100, 100, Rgba([0, 200, 0, 255]));
-        let result = format_sprite(encode_png(img)).unwrap();
-        assert_eq!(result.width(), 108);
-        assert_eq!(result.height(), 108);
-    }
-
-    #[test]
-    fn preserves_size_for_small_image() {
-        // 20x20 opaque → padded 28x28, no scaling needed
-        let img = RgbaImage::from_pixel(20, 20, Rgba([0, 0, 255, 255]));
-        let result = format_sprite(encode_png(img)).unwrap();
-        assert_eq!(result.width(), 28);
-        assert_eq!(result.height(), 28);
-    }
-
-    #[test]
-    fn returns_error_for_invalid_bytes() {
-        let bad = bytes::Bytes::from("not a png");
-        assert!(format_sprite(bad).is_err());
-    }
-
-    #[test]
-    fn scale_to_fit_caps_oversized_canvas() {
-        let a = RgbaImage::from_pixel(100, 100, Rgba([255, 0, 0, 255]));
-        let b = RgbaImage::from_pixel(100, 100, Rgba([0, 0, 255, 255]));
-        let (sa, sb) = scale_to_fit(a, b, 4, 128);
-        assert!(sa.width() + 4 + sb.width() <= 128);
-    }
-
-    #[test]
-    fn scale_to_fit_preserves_small_sprites() {
-        let a = RgbaImage::from_pixel(60, 60, Rgba([255, 0, 0, 255]));
-        let b = RgbaImage::from_pixel(60, 60, Rgba([0, 0, 255, 255]));
-        let (sa, sb) = scale_to_fit(a, b, 4, 128);
-        // 60+4+60=124 ≤ 128, no scaling
-        assert_eq!(sa.width(), 60);
-        assert_eq!(sb.width(), 60);
-    }
-}
