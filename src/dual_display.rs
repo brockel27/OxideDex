@@ -47,7 +47,7 @@ async fn load_sprite(url: &str) -> Option<RgbaImage> {
 
 // Composites two sprites side-by-side with a divider strip and renders the result centered within text_width columns.
 fn render_composite(a: RgbaImage, b: RgbaImage, text_width: usize) {
-    const GAP: u32 = 12;
+    const GAP: u32 = 8;
     let (a, b) = scale_to_fit(a, b, GAP, MAX_CANVAS_W);
     let canvas_w = a.width() + GAP + b.width();
     let max_h = a.height().max(b.height());
