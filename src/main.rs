@@ -10,7 +10,9 @@ use std::env;
 
 #[tokio::main]
 async fn main() {
+    // Force ANSI color codes even when stdout isn't a TTY (e.g. piped output).
     control::set_override(true);
+
     let args: Vec<String> = env::args().collect();
     let client = RustemonClient::default();
 
@@ -30,6 +32,7 @@ async fn main() {
 mod tests {
     use crate::format::colorize_type;
 
+    // Prints every type color to stdout so the palette can be visually verified.
     #[test]
     fn print_color_palette() {
         let types = vec![

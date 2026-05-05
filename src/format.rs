@@ -2,6 +2,7 @@ use rustemon::model::pokemon::Pokemon;
 use colored::*;
 use image::{DynamicImage, GenericImageView};
 
+// Colors a stat bar string based on the stat's value.
 pub fn colorize_line(stat_line: &str, stat_value: &i64) -> ColoredString {
     match stat_value {
         30..60   => stat_line.truecolor(255, 135, 0).bold(),
@@ -13,6 +14,7 @@ pub fn colorize_line(stat_line: &str, stat_value: &i64) -> ColoredString {
     }
 }
 
+// Returns the type name as a bold colored string matching its official type color.
 pub fn colorize_type(type_name: &str) -> ColoredString {
     let formatted = format_name(type_name);
     match type_name.to_lowercase().as_str() {
@@ -37,7 +39,7 @@ pub fn colorize_type(type_name: &str) -> ColoredString {
     }
 }
 
-// ANSI escape bytes inflate a naive `.len()`
+// Returns the printable character count of a string, ignoring ANSI escape codes.
 pub fn visible_len(s: &str) -> usize {
     let mut len = 0;
     let mut in_escape = false;
@@ -49,6 +51,7 @@ pub fn visible_len(s: &str) -> usize {
     len
 }
 
+// Formats a Pokémon's types as a comma-separated colored string.
 pub fn types_to_string(p: &Pokemon) -> String {
     p.types
         .iter()
@@ -57,7 +60,7 @@ pub fn types_to_string(p: &Pokemon) -> String {
         .join(", ")
 }
 
-// PokeAPI names are lowercase and hyphen-separated
+// Converts a hyphen-separated PokeAPI name to Title Case (e.g. "mr-mime" → "Mr Mime").
 pub fn format_name(name: &str) -> String {
     name.split('-')
         .map(|word| {
@@ -71,6 +74,7 @@ pub fn format_name(name: &str) -> String {
         .join(" ")
 }
 
+// Maps PokeAPI stat names to display abbreviations (e.g. "special-attack" → "Sp. Atk").
 pub fn format_stat_name(name: &str) -> String {
     match name {
         "hp"               => name.to_uppercase(),
@@ -83,6 +87,7 @@ pub fn format_stat_name(name: &str) -> String {
     }
 }
 
+// Converts a PokeAPI generation name to its Roman numeral form (e.g. "generation-iv" → "IV").
 pub fn format_generation(gen_name: &str) -> String {
     gen_name
         .strip_prefix("generation-")
@@ -90,10 +95,12 @@ pub fn format_generation(gen_name: &str) -> String {
         .unwrap_or_else(|| format_name(gen_name))
 }
 
+// Returns true if every pixel in row y of the image is fully transparent.
 pub fn is_row_transparent(img: &DynamicImage, y: u32) -> bool {
     (0..img.width()).all(|x| img.get_pixel(x, y).0[3] == 0)
 }
 
+// Returns true if every pixel in column x of the image is fully transparent.
 pub fn is_col_transparent(img: &DynamicImage, x: u32) -> bool {
     (0..img.height()).all(|y| img.get_pixel(x, y).0[3] == 0)
 }

@@ -3,9 +3,10 @@ use rustemon::client::RustemonClient;
 use rustemon::model::pokemon::Pokemon;
 use rustemon::pokemon::{pokemon, pokemon_species};
 use std::io::Cursor;
+use colored::Colorize;
 
-// One-time fetch to pass to display function
-async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
+// Downloads raw PNG sprite bytes from a URL.
+pub(crate) async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
     match reqwest::get(url).await {
         Ok(response) => match response.bytes().await {
             Ok(bytes) => Some(bytes),
@@ -15,7 +16,7 @@ async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
     }
 }
 
-// Displaying all sprites nicely requres some formatting and padding
+// Trims transparent borders, re-pads, and renders a sprite inline in the terminal.
 fn display_sprite(bytes: bytes::Bytes) {
     match image::load(Cursor::new(bytes), image::ImageFormat::Png) {
         Ok(img) => {
@@ -50,11 +51,14 @@ fn display_sprite(bytes: bytes::Bytes) {
     }
 }
 
-// Fetches P's stats and builds stat lines for display
+// Formats base stats into a bordered box with color-coded bar graphs.
 fn build_stat_lines(stats: &[rustemon::model::pokemon::PokemonStat], total: i64) -> Vec<String> {
     const BAR_WIDTH: usize = 20;
     const INNER: usize = 7 + 1 + 3 + 2 + 1 + BAR_WIDTH + 1; // content width = 35
-    let sep = "=".repeat(INNER + 4);
+    let sep = "=".truecolor(180, 70, 0).repeat(INNER + 4);
+
+
+
 
     let mut lines = vec![
         sep.clone(),
@@ -63,10 +67,9 @@ fn build_stat_lines(stats: &[rustemon::model::pokemon::PokemonStat], total: i64)
 
     for s in stats {
         let name = format_stat_name(&s.stat.name);
-        let symbol = "#";
         let value: i64 = s.base_stat;
         let bar_len = ((value as f32 / 180.0 * BAR_WIDTH as f32) as usize).min(BAR_WIDTH);
-        let bar = colorize_line(&symbol.repeat(bar_len), &value);
+        let bar = colorize_line(&"#".repeat(bar_len), &value);
         let padding = " ".repeat(BAR_WIDTH - bar_len);
         lines.push(format!("| {:<7} {:>3}  [{}{}] |", name, value, bar, padding));
     }
@@ -76,6 +79,7 @@ fn build_stat_lines(stats: &[rustemon::model::pokemon::PokemonStat], total: i64)
     lines
 }
 
+// Builds the side-by-side info and stat box lines for a Pokémon.
 pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient) -> Vec<String> {
     let generation_str = match pokemon_species::get_by_name(&p.species.name, client).await {
         Ok(species) => format_generation(&species.generation.name),
@@ -94,7 +98,7 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient) -> Vec<
         .join(", ");
 
     let formatted_name = format_name(&p.name);
-    let types_str = types_to_string(&p);
+    let types_str = types_to_string(p);
     let types_vis = visible_len(&types_str);
 
     let value_width = [
@@ -106,7 +110,7 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient) -> Vec<
     ].iter().copied().max().unwrap_or(10).max(12);
 
     let info_width = 14 + value_width;
-    let sep = "=".repeat(info_width + 1);
+    let sep = "=".truecolor(180, 70, 0).repeat(info_width + 1);
     let types_pad = " ".repeat(value_width.saturating_sub(types_vis));
 
     let info_lines: Vec<String> = vec![
@@ -145,12 +149,14 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient) -> Vec<
     lines
 }
 
+// Prints the formatted Pokémon info and stat lines to stdout.
 pub async fn print_pokemon_info(p: &Pokemon, client: &RustemonClient) {
     for line in pokemon_display_lines(p, client).await {
         println!("{}", line);
     }
 }
 
+// Fetches a Pokémon by name, renders its sprite, and prints its info.
 pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) {
     match pokemon::get_by_name(pokemon_name, client).await {
         Ok(p) => {
