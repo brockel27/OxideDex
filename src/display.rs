@@ -7,6 +7,33 @@ use rustemon::pokemon::{pokemon, pokemon_species};
 use std::io::Cursor;
 use colored::Colorize;
 
+const BCLR: (u8, u8, u8) = (180, 70, 0);
+
+// Prints the top border of the outer display frame.
+pub(crate) fn border_top(inner_w: usize) -> String {
+    format!("{}{}{}",
+        "╔".truecolor(BCLR.0, BCLR.1, BCLR.2),
+        "═".repeat(inner_w + 2).truecolor(BCLR.0, BCLR.1, BCLR.2),
+        "╗".truecolor(BCLR.0, BCLR.1, BCLR.2))
+}
+
+// Prints the bottom border of the outer display frame.
+pub(crate) fn border_bottom(inner_w: usize) -> String {
+    format!("{}{}{}",
+        "╚".truecolor(BCLR.0, BCLR.1, BCLR.2),
+        "═".repeat(inner_w + 2).truecolor(BCLR.0, BCLR.1, BCLR.2),
+        "╝".truecolor(BCLR.0, BCLR.1, BCLR.2))
+}
+
+// Wraps a content string with side borders, padding to inner_w visible columns.
+pub(crate) fn border_row(content: &str, inner_w: usize) -> String {
+    let pad = " ".repeat(inner_w.saturating_sub(visible_len(content)));
+    format!("{} {}{} {}",
+        "║".truecolor(BCLR.0, BCLR.1, BCLR.2),
+        content, pad,
+        "║".truecolor(BCLR.0, BCLR.1, BCLR.2))
+}
+
 // Downloads raw PNG sprite bytes from a URL.
 pub(crate) async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
     match reqwest::get(url).await {
@@ -166,17 +193,19 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) -
     let matchup = type_hash(&p, client).await;
     let matchup_lines = build_type_matchup_lines(&matchup, col_w);
 
+    println!("{}", border_top(col_w));
     if let Some(url) = p.sprites.front_default.as_deref() {
         if let Some(bytes) = fetch_sprite(url).await {
-            display_sprite(bytes, col_w);
+            // col_w + 4 = outer border width, so sprite centers within the bordered frame
+            display_sprite(bytes, col_w + 4);
         }
     }
-
     for line in &display_lines {
-        println!("{}", line);
+        println!("{}", border_row(line, col_w));
     }
     for line in &matchup_lines {
-        println!("{}", line);
+        println!("{}", border_row(line, col_w));
     }
+    println!("{}", border_bottom(col_w));
     Ok(())
 }

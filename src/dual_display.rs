@@ -1,4 +1,4 @@
-use crate::display::{fetch_sprite, pokemon_display_lines};
+use crate::display::{fetch_sprite, pokemon_display_lines, border_top, border_bottom, border_row};
 use crate::format::{is_col_transparent, is_row_transparent, visible_len};
 use crate::type_matchup::type_hash;
 use crate::type_matchup::build_type_matchup_lines;
@@ -102,8 +102,10 @@ pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonCli
         None => None,
     };
 
+    println!("{}", border_top(text_width));
     match (sprite_a, sprite_b) {
-        (Some(a), Some(b)) => render_composite(a, b, text_width),
+        // text_width + 4 = outer border width, so composite centers within the bordered frame
+        (Some(a), Some(b)) => render_composite(a, b, text_width + 4),
         _ => eprintln!("Could not load one or both sprites."),
     }
 
@@ -112,7 +114,8 @@ pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonCli
         let left  = display_lines_a.get(i).map(|s| s.as_str()).unwrap_or("");
         let right = display_lines_b.get(i).map(|s| s.as_str()).unwrap_or("");
         let pad = " ".repeat(col_w_a.saturating_sub(visible_len(left)) + COL_GAP);
-        println!("{}{}{}  {}", left, pad, "|".truecolor(180, 70, 0), right);
+        let line = format!("{}{}{}  {}", left, pad, "|".truecolor(180, 70, 0), right);
+        println!("{}", border_row(&line, text_width));
     }
 
     let max_matchup = matchup_lines_a.len().max(matchup_lines_b.len());
@@ -120,7 +123,10 @@ pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonCli
         let left  = matchup_lines_a.get(i).map(|s| s.as_str()).unwrap_or("");
         let right = matchup_lines_b.get(i).map(|s| s.as_str()).unwrap_or("");
         let pad = " ".repeat(col_w_a.saturating_sub(visible_len(left)) + COL_GAP);
-        println!("{}{}{}  {}", left, pad, "|".truecolor(180, 70, 0), right);
+        let line = format!("{}{}{}  {}", left, pad, "|".truecolor(180, 70, 0), right);
+        println!("{}", border_row(&line, text_width));
     }
+
+    println!("{}", border_bottom(text_width));
     Ok(())
 }
