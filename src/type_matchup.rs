@@ -68,8 +68,8 @@ pub fn build_type_matchup_lines(matchup: &HashMap<String, f32>, min_width: usize
     let left_pad  = extra / 2;
     let right_pad = extra - left_pad;
 
-    let eq   = "=".red().to_string();
-    let pipe = "|".red().to_string();
+    let eq   = "=".truecolor(120, 115, 110).to_string();
+    let pipe = "|".truecolor(120, 115, 110).to_string();
     let sep  = eq.repeat(total_w);
 
     let mut lines = vec![

@@ -60,8 +60,8 @@ fn display_sprite(bytes: bytes::Bytes, text_width: usize) {
 fn build_stat_lines(stats: &[rustemon::model::pokemon::PokemonStat], total: i64) -> Vec<String> {
     const BAR_WIDTH: usize = 20;
     const INNER: usize = 7 + 1 + 3 + 2 + 1 + BAR_WIDTH + 1; // content width = 35
-    let eq   = "=".red().to_string();
-    let pipe = "|".red().to_string();
+    let eq   = "=".truecolor(120, 115, 110).to_string();
+    let pipe = "|".truecolor(120, 115, 110).to_string();
     let sep  = eq.repeat(INNER + 4);
 
     let mut lines = vec![
@@ -84,7 +84,8 @@ fn build_stat_lines(stats: &[rustemon::model::pokemon::PokemonStat], total: i64)
 }
 
 // Builds the side-by-side info and stat box lines for a Pokémon.
-pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient) -> Vec<String> {
+// max_value_width caps the column width for dual display; pass None for single display.
+pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient, max_value_width: Option<usize>) -> Vec<String> {
     let generation_str = match pokemon_species::get_by_name(&p.species.name, client).await {
         Ok(species) => format_generation(&species.generation.name),
         Err(_) => String::from("Unknown"),
@@ -113,20 +114,24 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient) -> Vec<
         abilities_list.len(),
     ].iter().copied().max().unwrap_or(10).max(12);
 
+    let value_width = value_width.min(max_value_width.unwrap_or(usize::MAX));
+    let name_display = truncate_display(&formatted_name, value_width);
+    let abilities_display = truncate_display(&abilities_list, value_width);
+
     let info_width = 14 + value_width;
-    let eq   = "=".red().to_string();
-    let pipe = "|".red().to_string();
+    let eq   = "=".truecolor(120, 115, 110).to_string();
+    let pipe = "|".truecolor(120, 115, 110).to_string();
     let sep  = eq.repeat(info_width + 1);
     let types_pad = " ".repeat(value_width.saturating_sub(types_vis));
 
     let info_lines: Vec<String> = vec![
         sep.clone(),
-        format!("{} Name:       {:<w$} {}", pipe, formatted_name,             pipe, w = value_width),
+        format!("{} Name:       {:<w$} {}", pipe, name_display,               pipe, w = value_width),
         format!("{} Dex No:     {:<w$} {}", pipe, format!("#{}", p.id),       pipe, w = value_width),
         format!("{} Height:     {:<w$} {}", pipe, format!("{} m", height_in_meters), pipe, w = value_width),
         format!("{} Weight:     {:<w$} {}", pipe, format!("{} kg", weight_in_kg),    pipe, w = value_width),
         format!("{} Types:      {}{} {}", pipe, types_str, types_pad,               pipe),
-        format!("{} Abilities:  {:<w$} {}", pipe, abilities_list,              pipe, w = value_width),
+        format!("{} Abilities:  {:<w$} {}", pipe, abilities_display,           pipe, w = value_width),
         format!("{} Generation: {:<w$} {}", pipe, generation_str,              pipe, w = value_width),
         format!("{} {:<w$} {}", pipe, "",                                      pipe, w = value_width + 12),
         sep,
@@ -160,7 +165,7 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) -
     let p = pokemon::get_by_name(pokemon_name, client).await
         .map_err(|e| format!("Could not find '{}'. ({})", pokemon_name, e))?;
 
-    let display_lines = pokemon_display_lines(&p, client).await;
+    let display_lines = pokemon_display_lines(&p, client, None).await;
     let col_w = display_lines.iter().map(|l| visible_len(l)).max().unwrap_or(0);
 
     let matchup = type_hash(&p, client).await;

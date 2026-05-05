@@ -1,2 +1,3 @@
 
 0ebf9e4ac7e33adf0dd7fd3188e7d57318377cccd267dff19bfcca26a8d02c59	{"key":"GET:https://pokeapi.co/api/v2/pokemon-species/bulbasaur","integrity":"sha256-wh+zBixjGt8MFxrQfwihdSnHTwGhN84u3qsqqouXVTM=","time":1777548101056,"size":34280,"metadata":null,"raw_metadata":null}
+84c860f19e34057a3f0c495a240ee3d2f15231655694d74f2373f060085fca34	{"key":"GET:https://pokeapi.co/api/v2/pokemon-species/bulbasaur","integrity":"sha256-MTP/DRTJj+dpgoyhBDcrxw0KQ7Qy47o8wfs4reZp2mM=","time":1777990990753,"size":34364,"metadata":null,"raw_metadata":null}

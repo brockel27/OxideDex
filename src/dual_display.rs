@@ -1,5 +1,6 @@
 use crate::display::{fetch_sprite, pokemon_display_lines};
 use crate::format::{border_bottom, border_row, border_top, is_col_transparent, is_row_transparent, visible_len};
+use crossterm::terminal;
 use crate::type_matchup::type_hash;
 use crate::type_matchup::build_type_matchup_lines;
 
@@ -47,7 +48,7 @@ async fn load_sprite(url: &str) -> Option<RgbaImage> {
 
 // Composites two sprites side-by-side with a divider strip and renders the result centered within text_width columns.
 fn render_composite(a: RgbaImage, b: RgbaImage, text_width: usize) {
-    const GAP: u32 = 8;
+    const GAP: u32 = 4;
     let (a, b) = scale_to_fit(a, b, GAP, MAX_CANVAS_W);
     let canvas_w = a.width() + GAP + b.width();
     let max_h = a.height().max(b.height());
@@ -76,8 +77,13 @@ pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonCli
     let pb = pokemon::get_by_name(pokemon_b, client).await
         .map_err(|e| format!("Could not find '{}'. ({})", pokemon_b, e))?;
 
-    let display_lines_a = pokemon_display_lines(&pa, client).await;
-    let display_lines_b = pokemon_display_lines(&pb, client).await;
+    // Cap each column so the combined display fits within the terminal width.
+    // total_width = 2*col_w + 9, col_w = 55 + value_width => max_value_width = (term_w - 119) / 2
+    let term_w = terminal::size().map(|(w, _)| w as usize).unwrap_or(200);
+    let max_value_width = ((term_w.saturating_sub(119)) / 2).max(12);
+
+    let display_lines_a = pokemon_display_lines(&pa, client, Some(max_value_width)).await;
+    let display_lines_b = pokemon_display_lines(&pb, client, Some(max_value_width)).await;
 
     const COL_GAP: usize = 2;
     let col_w_a = display_lines_a.iter().map(|l| visible_len(l)).max().unwrap_or(0);

@@ -95,7 +95,16 @@ pub fn format_generation(gen_name: &str) -> String {
         .unwrap_or_else(|| format_name(gen_name))
 }
 
-const BCLR: (u8, u8, u8) = (180, 70, 0);
+// Truncates a string to max_len visible chars, appending "..." if it was cut.
+pub fn truncate_display(s: &str, max_len: usize) -> String {
+    if s.chars().count() <= max_len {
+        s.to_string()
+    } else {
+        s.chars().take(max_len.saturating_sub(3)).collect::<String>() + "..."
+    }
+}
+
+const BCLR: (u8, u8, u8) = (165, 155, 140);
 
 // Returns the top border line of the outer display frame.
 pub fn border_top(inner_w: usize) -> String {
