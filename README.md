@@ -113,6 +113,12 @@ cargo test print_color_palette -- --nocapture
 
 ---
 
+## AI Assistance
+
+This project was developed with the assistance of [Claude Code](https://claude.ai/code) (Anthropic). Claude was used as a coding assistant throughout development — helping with implementation, debugging, and design decisions. All code was reviewed and directed by the project author.
+
+---
+
 <div align="center">
 <sub>Built with ⚙️ and ❤️ as a Rust learning project</sub>
 </div>
