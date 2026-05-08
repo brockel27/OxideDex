@@ -10,6 +10,7 @@ dependencies = [
  "clearscreen",
  "colored",
  "control",
+ "crossterm",
  "image",
  "reqwest 0.11.27",
  "rustemon",

@@ -12,6 +12,7 @@ use std::env;
 
 #[tokio::main]
 async fn main() {
+    clearscreen::clear().expect("Failed to clear screen");
     // Force ANSI color codes even when stdout isn't a TTY (e.g. piped output).
     control::set_override(true);
 
