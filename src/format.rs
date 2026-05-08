@@ -5,9 +5,10 @@ use image::{DynamicImage, GenericImageView};
 // Colors a stat bar string based on the stat's value.
 pub fn colorize_line(stat_line: &str, stat_value: &i64) -> ColoredString {
     match stat_value {
+         0..30   => stat_line.truecolor(145, 28, 28).bold(),
         30..60   => stat_line.truecolor(255, 135, 0).bold(),
         60..80   => stat_line.yellow().bold(),
-        80..100  => stat_line.truecolor(166, 195, 25).bold(),
+        80..100  => stat_line.truecolor(180, 210, 28).bold(),
         100..120 => stat_line.green().bold(),
         120..=255 => stat_line.cyan().bold(),
         _ => stat_line.normal(),
@@ -21,7 +22,7 @@ pub fn colorize_type(type_name: &str) -> ColoredString {
         "fire"     => formatted.red().bold(),
         "water"    => formatted.blue().bold(),
         "grass"    => formatted.green().bold(),
-        "electric" => formatted.yellow().bold(),
+        "electric" => formatted.truecolor(255, 251, 0).bold(),
         "ice"      => formatted.cyan().bold(),
         "poison"   => formatted.magenta().bold(),
         "fighting" => formatted.truecolor(255, 128, 0).bold(),
@@ -104,7 +105,8 @@ pub fn truncate_display(s: &str, max_len: usize) -> String {
     }
 }
 
-const BCLR: (u8, u8, u8) = (165, 155, 140);
+// border color
+const BCLR: (u8, u8, u8) = (180, 60, 60);
 
 // Returns the top border line of the outer display frame.
 pub fn border_top(inner_w: usize) -> String {

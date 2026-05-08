@@ -56,12 +56,14 @@ fn display_sprite(bytes: bytes::Bytes, text_width: usize) {
     }
 }
 
+const BCLR: (u8, u8, u8) = (225, 170, 160);
+
 // Formats base stats into a bordered box with color-coded bar graphs.
 fn build_stat_lines(stats: &[rustemon::model::pokemon::PokemonStat], total: i64) -> Vec<String> {
     const BAR_WIDTH: usize = 20;
     const INNER: usize = 7 + 1 + 3 + 2 + 1 + BAR_WIDTH + 1; // content width = 35
-    let eq   = "=".truecolor(120, 115, 110).to_string();
-    let pipe = "|".truecolor(120, 115, 110).to_string();
+    let eq   = "=".truecolor(BCLR.0, BCLR.1, BCLR.2).to_string();
+    let pipe = "|".truecolor(BCLR.0, BCLR.1, BCLR.2).to_string();
     let sep  = eq.repeat(INNER + 4);
 
     let mut lines = vec![
@@ -119,8 +121,8 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient, max_val
     let abilities_display = truncate_display(&abilities_list, value_width);
 
     let info_width = 14 + value_width;
-    let eq   = "=".truecolor(120, 115, 110).to_string();
-    let pipe = "|".truecolor(120, 115, 110).to_string();
+    let eq   = "=".truecolor(BCLR.0, BCLR.1, BCLR.2).to_string();
+    let pipe = "|".truecolor(BCLR.0, BCLR.1, BCLR.2).to_string();
     let sep  = eq.repeat(info_width + 1);
     let types_pad = " ".repeat(value_width.saturating_sub(types_vis));
 
