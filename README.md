@@ -23,7 +23,7 @@
 
 ## Overview
 
-**OxideDex** leverages the PokéAPI to provide real-time sprite display, base stats, type effectiveness, and abilities with a color-coded terminal interface. Look up a single Pokémon or compare two side by side.
+**OxideDex** leverages the PokéAPI to provide real-time sprite display, base stats, type effectiveness, and abilities with a color-coded terminal interface. Look up a single Pokémon, compare two side by side, or let the Dex surprise you with a random pick.
 
 ---
 
@@ -31,6 +31,9 @@
 
 - **Single display** — sprite, info box (name, dex number, height, weight, types, abilities, generation), stat bars with color-coded BST visualization, and a full 18-type effectiveness grid
 - **Dual display** — two Pokémon side by side with their sprites composited into one image, individual info/stat columns, and per-Pokémon type effectiveness grids
+- **Pokédex flavor text** — a randomly selected game description shown at the bottom of every lookup (or side-by-side in dual mode)
+- **Shiny sprites** — add `-s` after a Pokémon name to display its shiny sprite; in dual display each slot is independently controlled
+- **Random mode** — use `random` as a name to pull a surprise Pokémon from the full Dex (#1–1025)
 - **Responsive layout** — dual display automatically scales column widths to fit your terminal, truncating long ability lists gracefully when needed
 - **Type effectiveness** — multiplicative dual-type stacking (0×, ¼×, ½×, 1×, 2×, 4×) rendered in a 3×6 color-coded grid
 - **Local API cache** — responses are cached via rustemon so repeat lookups are near-instant
@@ -50,6 +53,7 @@
 | `viuer` | Inline terminal image rendering |
 | `crossterm` | Terminal size detection for responsive layout |
 | `bytes` | Raw byte buffer for sprite downloads |
+| `rand` | Random Pokémon selection and flavor text sampling |
 
 ---
 
@@ -78,9 +82,25 @@ cargo build --release
 cargo run -- lucario
 cargo run -- 448
 
+# Shiny sprite
+cargo run -- pikachu -s
+
+# Random Pokémon
+cargo run -- random
+
+# Random shiny
+cargo run -- random -s
+
 # Compare two Pokémon side by side
 cargo run -- charizard blastoise
-cargo run -- arcanine arcanine-hisui
+
+# Dual display with shiny — -s is positional, applies to the preceding name
+cargo run -- pikachu -s pikachu          # left shiny, right normal
+cargo run -- pikachu pikachu -s          # left normal, right shiny
+cargo run -- pikachu -s pikachu -s       # both shiny
+
+# Random slots work in dual display too
+cargo run -- random random -s
 ```
 
 ---
