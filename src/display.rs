@@ -8,8 +8,12 @@ use rustemon::pokemon::{pokemon, pokemon_species};
 use std::io::Cursor;
 use colored::Colorize;
 
-const DEFAULT_COL_W: usize = 58;
-const BAR_WIDTH:     usize = 24;
+const SPRITE_COLS: usize = 96;
+const SIDE_GAP:    usize = 2;
+const INFO_COL_W:  usize = 44;
+const RIGHT_PAD:   usize = 4;
+const FULL_COL_W:  usize = SPRITE_COLS + SIDE_GAP + INFO_COL_W + RIGHT_PAD;
+const BAR_WIDTH:   usize = 26;
 
 // Downloads raw PNG sprite bytes from a URL.
 pub(crate) async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
@@ -22,41 +26,70 @@ pub(crate) async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
     }
 }
 
-// Trims transparent borders, re-pads, and renders a sprite inline in the terminal.
-fn display_sprite(bytes: bytes::Bytes, text_width: usize) {
-    const RENDER_WIDTH: u32 = 128;
-    match image::load(Cursor::new(bytes), image::ImageFormat::Png) {
-        Ok(img) => {
-            let (mut top, mut bottom) = (0, img.height() - 1);
-            let (mut left, mut right) = (0, img.width() - 1);
-            while top < bottom && is_row_transparent(&img, top) { top += 1; }
-            while bottom > top && is_row_transparent(&img, bottom) { bottom -= 1; }
-            while left < right && is_col_transparent(&img, left) { left += 1; }
-            while right > left && is_col_transparent(&img, right) { right -= 1; }
-            let trimmed = img.crop_imm(left, top, right - left + 1, bottom - top + 1);
+// Converts sprite PNG bytes into half-block ANSI strings (one string per two pixel rows).
+fn sprite_to_lines(bytes: bytes::Bytes, target_cols: usize) -> Option<Vec<String>> {
+    let img = image::load(Cursor::new(bytes), image::ImageFormat::Png).ok()?;
 
-            let pad = 4u32;
-            let trimmed_rgba = trimmed.to_rgba8();
-            let mut padded = image::RgbaImage::new(
-                trimmed_rgba.width() + pad * 2,
-                trimmed_rgba.height() + pad * 2,
-            );
-            image::imageops::overlay(&mut padded, &trimmed_rgba, pad as i64, pad as i64);
+    let (mut top, mut bottom) = (0, img.height() - 1);
+    let (mut left, mut right) = (0, img.width() - 1);
+    while top < bottom && is_row_transparent(&img, top) { top += 1; }
+    while bottom > top && is_row_transparent(&img, bottom) { bottom -= 1; }
+    while left < right && is_col_transparent(&img, left) { left += 1; }
+    while right > left && is_col_transparent(&img, right) { right -= 1; }
+    let trimmed = img.crop_imm(left, top, right - left + 1, bottom - top + 1);
 
-            let x_offset = (text_width as u32).saturating_sub(RENDER_WIDTH) / 2;
-            let config = viuer::Config {
-                transparent: true,
-                absolute_offset: false,
-                x: x_offset as u16,
-                width: Some(RENDER_WIDTH),
-                use_kitty: false,
-                use_iterm: false,
-                ..Default::default()
-            };
-            let _ = viuer::print(&image::DynamicImage::from(padded), &config);
+    let pad = 4u32;
+    let trimmed_rgba = trimmed.to_rgba8();
+    let mut padded = image::RgbaImage::new(
+        trimmed_rgba.width() + pad * 2,
+        trimmed_rgba.height() + pad * 2,
+    );
+    image::imageops::overlay(&mut padded, &trimmed_rgba, pad as i64, pad as i64);
+
+    // Only scale down — never upscale a sprite smaller than target_cols.
+    let (resized, right_pad) = if padded.width() as usize > target_cols {
+        let scale = target_cols as f32 / padded.width() as f32;
+        let new_h = ((padded.height() as f32 * scale) as u32).max(1);
+        let r = image::imageops::resize(&padded, target_cols as u32, new_h, image::imageops::FilterType::Lanczos3);
+        (r, 0usize)
+    } else {
+        let pad = target_cols.saturating_sub(padded.width() as usize);
+        (padded, pad)
+    };
+
+    let h = resized.height();
+    let w = resized.width();
+    let mut lines = Vec::new();
+    let mut y = 0u32;
+    while y < h {
+        let mut row = String::new();
+        for x in 0..w {
+            let tp = resized.get_pixel(x, y);
+            if y + 1 < h {
+                let bp = resized.get_pixel(x, y + 1);
+                let s = match (tp[3] >= 128, bp[3] >= 128) {
+                    (false, false) => " ".to_string(),
+                    (true,  false) => "▀".truecolor(tp[0], tp[1], tp[2]).to_string(),
+                    (false, true)  => "▄".truecolor(bp[0], bp[1], bp[2]).to_string(),
+                    (true,  true)  => "▄".on_truecolor(tp[0], tp[1], tp[2])
+                                        .truecolor(bp[0], bp[1], bp[2]).to_string(),
+                };
+                row.push_str(&s);
+            } else {
+                let s = if tp[3] >= 128 {
+                    "▀".truecolor(tp[0], tp[1], tp[2]).to_string()
+                } else {
+                    " ".to_string()
+                };
+                row.push_str(&s);
+            }
         }
-        Err(e) => eprintln!("Could not decode image: {}", e),
+        row.push_str("\x1b[0m");
+        if right_pad > 0 { row.push_str(&" ".repeat(right_pad)); }
+        lines.push(row);
+        y += 2;
     }
+    Some(lines)
 }
 
 // Fetches a random English Pokédex flavor text entry for a species.
@@ -106,7 +139,7 @@ fn right_align(left: &str, right: &str, col_w: usize) -> String {
 
 // Builds a single stat bar line.
 fn stat_line(stat_name: &str, value: i64, col_w: usize) -> String {
-    let bar_w   = BAR_WIDTH.min(col_w.saturating_sub(17));
+    let bar_w   = BAR_WIDTH.min(col_w.saturating_sub(18));
     let bar_len = ((value as f32 / 180.0 * bar_w as f32) as usize).min(bar_w);
     let filled  = colorize_line(&"█".repeat(bar_len), &value).to_string();
     let empty   = "░".repeat(bar_w - bar_len)
@@ -119,7 +152,6 @@ fn stat_line(stat_name: &str, value: i64, col_w: usize) -> String {
 }
 
 // Builds the stacked display lines for a Pokémon (identity header + physical info + stats).
-// col_w is the exact inner width of the enclosing border column.
 pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient, col_w: usize) -> Vec<String> {
     let generation_str = match pokemon_species::get_by_name(&p.species.name, client).await {
         Ok(species) => format_generation(&species.generation.name),
@@ -157,17 +189,14 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient, col_w: 
 
     let mut lines: Vec<String> = Vec::new();
 
-    // Identity header
     lines.push(right_align(&name, &dex_id, col_w));
     lines.push(right_align(&types_str, &gen_str, col_w));
     lines.push(plain_rule(col_w));
 
-    // Physical info
     lines.push(physical_line);
     lines.push(ability_line);
     lines.push(String::new());
 
-    // Base stats
     lines.push(section_rule("Base Stats", col_w));
     for s in &p.stats {
         lines.push(stat_line(&format_stat_name(&s.stat.name), s.base_stat, col_w));
@@ -178,40 +207,48 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient, col_w: 
     lines
 }
 
-// Fetches a Pokémon by name, renders its sprite, and prints its info.
+// Fetches a Pokémon by name, renders its sprite side-by-side with info, and prints its data.
 pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient, shiny: bool) -> Result<(), String> {
     let p = pokemon::get_by_name(pokemon_name, client).await
         .map_err(|e| format!("Could not find '{}'. ({})", pokemon_name, e))?;
 
-    let display_lines = pokemon_display_lines(&p, client, DEFAULT_COL_W).await;
+    let sprite_url = if shiny { p.sprites.front_shiny.as_deref() } else { p.sprites.front_default.as_deref() };
+    let sprite_lines: Vec<String> = match sprite_url {
+        Some(url) => match fetch_sprite(url).await {
+            Some(bytes) => sprite_to_lines(bytes, SPRITE_COLS).unwrap_or_default(),
+            None => Vec::new(),
+        },
+        None => Vec::new(),
+    };
+
+    let info_lines    = pokemon_display_lines(&p, client, INFO_COL_W).await;
     let matchup       = type_hash(&p, client).await;
-    let matchup_lines = build_type_matchup_lines(&matchup, DEFAULT_COL_W);
+    let matchup_lines = build_type_matchup_lines(&matchup, INFO_COL_W);
     let flavor_text   = get_flavor_text(&p.species.name, client).await;
 
-    println!("{}", border_top(DEFAULT_COL_W));
-    let sprite_url = if shiny { p.sprites.front_shiny.as_deref() } else { p.sprites.front_default.as_deref() };
-    if let Some(url) = sprite_url {
-        if let Some(bytes) = fetch_sprite(url).await {
-            display_sprite(bytes, DEFAULT_COL_W + 4);
-        }
-    }
-    println!("{}", border_row("", DEFAULT_COL_W));
-
-    for line in &display_lines {
-        println!("{}", border_row(line, DEFAULT_COL_W));
-    }
-    for line in &matchup_lines {
-        println!("{}", border_row(line, DEFAULT_COL_W));
-    }
-
+    // Assemble the full right column: identity/stats → type matchup → pokédex
+    let mut right_col: Vec<String> = Vec::new();
+    right_col.extend(info_lines);
+    right_col.extend(matchup_lines);
     if let Some(text) = flavor_text {
-        println!("{}", border_row(&section_rule("Pokédex", DEFAULT_COL_W), DEFAULT_COL_W));
-        for line in wrap_text(&text, DEFAULT_COL_W - 2) {
-            println!("{}", border_row(&line, DEFAULT_COL_W));
-        }
-        println!("{}", border_row("", DEFAULT_COL_W));
+        right_col.push(section_rule("Pokédex", INFO_COL_W));
+        for line in wrap_text(&text, INFO_COL_W - 2) { right_col.push(line); }
+        right_col.push(String::new());
     }
 
-    println!("{}", border_bottom(DEFAULT_COL_W));
+    let blank_sprite = " ".repeat(SPRITE_COLS);
+    let max_lines = sprite_lines.len().max(right_col.len());
+
+    println!("{}", border_top(FULL_COL_W));
+    println!("{}", border_row("", FULL_COL_W));
+
+    for i in 0..max_lines {
+        let sprite_col = sprite_lines.get(i).map(|s| s.as_str()).unwrap_or(&blank_sprite);
+        let info_col   = right_col.get(i).map(|s| s.as_str()).unwrap_or("");
+        let combined   = format!("{}{:gap$}{}", sprite_col, "", info_col, gap = SIDE_GAP);
+        println!("{}", border_row(&combined, FULL_COL_W));
+    }
+
+    println!("{}", border_bottom(FULL_COL_W));
     Ok(())
 }
