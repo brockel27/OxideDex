@@ -21,6 +21,10 @@
 
 ---
 
+> **experimental branch** — This branch is used for messing around with [Claude Code](https://claude.ai/code) and testing out new features. Things here may be unpolished or in flux.
+
+---
+
 ## Overview
 
 **OxideDex** leverages the PokéAPI to provide real-time sprite display, base stats, type effectiveness, and abilities with a color-coded terminal interface. Look up a single Pokémon, compare two side by side, or let the Dex surprise you with a random pick.
