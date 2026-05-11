@@ -243,7 +243,22 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient, s
     let matchup       = type_hash(&p, client).await;
     let matchup_lines = build_type_matchup_lines(&matchup, INFO_COL_W);
     let flavor_text   = get_flavor_text(&p.species.name, client).await;
-    let forms         = get_alternate_forms(&p.species.name, &p.name, client).await;
+    // Varieties (megas, regional forms, cosplay variants, etc.)
+    let mut forms = get_alternate_forms(&p.species.name, &p.name, client).await;
+
+    // Appearance-only forms (Furfrou trims, Burmy cloaks, Unown letters, etc.)
+    // These live in p.forms rather than species.varieties.
+    if p.forms.len() > 1 {
+        let prefix = format!("{}-", p.name.to_lowercase());
+        for f in &p.forms {
+            if f.name == p.name { continue; }
+            let stripped = f.name.strip_prefix(&prefix).unwrap_or(f.name.as_str());
+            let formatted = format_name(stripped);
+            if !forms.contains(&formatted) {
+                forms.push(formatted);
+            }
+        }
+    }
 
     // Assemble the full right column: identity/stats → type matchup → pokédex → forms
     let mut right_col: Vec<String> = Vec::new();
