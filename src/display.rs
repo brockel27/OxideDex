@@ -4,7 +4,7 @@ use crate::type_matchup::{type_hash, build_type_matchup_lines};
 use rand::seq::SliceRandom;
 use rustemon::client::RustemonClient;
 use rustemon::model::pokemon::Pokemon;
-use rustemon::pokemon::{pokemon, pokemon_species};
+use rustemon::pokemon::{pokemon, pokemon_form, pokemon_species};
 use std::io::Cursor;
 use colored::Colorize;
 
@@ -227,10 +227,23 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient, col_w: 
 
 // Fetches a Pokémon by name, renders its sprite side-by-side with info, and prints its data.
 pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient, shiny: bool) -> Result<(), String> {
-    let p = pokemon::get_by_name(pokemon_name, client).await
-        .map_err(|e| format!("Could not find '{}'. ({})", pokemon_name, e))?;
+    // Try direct Pokémon lookup; fall back to pokemon-form for appearance-only variants
+    // (e.g. furfrou-heart, burmy-sandy) which have no separate /pokemon entry.
+    let (p, form_sprite): (Pokemon, Option<String>) =
+        match pokemon::get_by_name(pokemon_name, client).await {
+            Ok(poke) => (poke, None),
+            Err(_) => {
+                let form = pokemon_form::get_by_name(pokemon_name, client).await
+                    .map_err(|_| format!("Could not find '{}'.", pokemon_name))?;
+                let base = pokemon::get_by_name(&form.pokemon.name, client).await
+                    .map_err(|e| format!("Could not find base Pokémon '{}'. ({})", form.pokemon.name, e))?;
+                let sprite = if shiny { form.sprites.front_shiny } else { form.sprites.front_default };
+                (base, sprite)
+            }
+        };
 
-    let sprite_url = if shiny { p.sprites.front_shiny.as_deref() } else { p.sprites.front_default.as_deref() };
+    let sprite_url = form_sprite.as_deref()
+        .or_else(|| if shiny { p.sprites.front_shiny.as_deref() } else { p.sprites.front_default.as_deref() });
     let sprite_lines: Vec<String> = match sprite_url {
         Some(url) => match fetch_sprite(url).await {
             Some(bytes) => sprite_to_lines(bytes, SPRITE_COLS).unwrap_or_default(),
