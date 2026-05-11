@@ -8,6 +8,9 @@ use rustemon::pokemon::{pokemon, pokemon_species};
 use std::io::Cursor;
 use colored::Colorize;
 
+const DEFAULT_COL_W: usize = 58;
+const BAR_WIDTH:     usize = 24;
+
 // Downloads raw PNG sprite bytes from a URL.
 pub(crate) async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
     match reqwest::get(url).await {
@@ -19,7 +22,7 @@ pub(crate) async fn fetch_sprite(url: &str) -> Option<bytes::Bytes> {
     }
 }
 
-// Trims transparent borders, re-pads, and renders a sprite inline in the terminal centered within text_width columns.
+// Trims transparent borders, re-pads, and renders a sprite inline in the terminal.
 fn display_sprite(bytes: bytes::Bytes, text_width: usize) {
     const RENDER_WIDTH: u32 = 128;
     match image::load(Cursor::new(bytes), image::ImageFormat::Png) {
@@ -32,7 +35,6 @@ fn display_sprite(bytes: bytes::Bytes, text_width: usize) {
             while right > left && is_col_transparent(&img, right) { right -= 1; }
             let trimmed = img.crop_imm(left, top, right - left + 1, bottom - top + 1);
 
-            // Transparent border prevents bilinear resize from blending edge pixels, causing fringe.
             let pad = 4u32;
             let trimmed_rgba = trimmed.to_rgba8();
             let mut padded = image::RgbaImage::new(
@@ -90,114 +92,88 @@ pub fn wrap_text(text: &str, max_w: usize) -> Vec<String> {
             current = word.to_string();
         }
     }
-    if !current.is_empty() {
-        lines.push(current);
-    }
+    if !current.is_empty() { lines.push(current); }
     lines
 }
 
-const BCLR: (u8, u8, u8) = (225, 170, 160);
-
-// Formats base stats into a bordered box with color-coded bar graphs.
-fn build_stat_lines(stats: &[rustemon::model::pokemon::PokemonStat], total: i64) -> Vec<String> {
-    const BAR_WIDTH: usize = 20;
-    const INNER: usize = 7 + 1 + 3 + 2 + 1 + BAR_WIDTH + 1; // content width = 35
-    let eq   = "=".truecolor(BCLR.0, BCLR.1, BCLR.2).to_string();
-    let pipe = "|".truecolor(BCLR.0, BCLR.1, BCLR.2).to_string();
-    let sep  = eq.repeat(INNER + 4);
-
-    let mut lines = vec![
-        sep.clone(),
-        format!("{} {:<width$} {}", pipe, "Base Stats", pipe, width = INNER),
-    ];
-
-    for s in stats {
-        let name = format_stat_name(&s.stat.name);
-        let value: i64 = s.base_stat;
-        let bar_len = ((value as f32 / 180.0 * BAR_WIDTH as f32) as usize).min(BAR_WIDTH);
-        let bar = colorize_line(&"#".repeat(bar_len), &value);
-        let padding = " ".repeat(BAR_WIDTH - bar_len);
-        lines.push(format!("{} {:<7} {:>3}  [{}{}] {}", pipe, name, value, bar, padding, pipe));
-    }
-
-    lines.push(format!("{} {:<width$} {}", pipe, format!("BST:  {}", total), pipe, width = INNER));
-    lines.push(sep);
-    lines
+// Right-aligns `right` within `col_w`, with `left` at the start.
+fn right_align(left: &str, right: &str, col_w: usize) -> String {
+    let left_vis  = visible_len(left);
+    let right_vis = visible_len(right);
+    let gap = col_w.saturating_sub(left_vis + right_vis).max(1);
+    format!("{}{:>gap$}{}", left, "", right, gap = gap)
 }
 
-// Builds the side-by-side info and stat box lines for a Pokémon.
-// max_value_width caps the column width for dual display; pass None for single display.
-pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient, max_value_width: Option<usize>) -> Vec<String> {
+// Builds a single stat bar line.
+fn stat_line(stat_name: &str, value: i64, col_w: usize) -> String {
+    let bar_w   = BAR_WIDTH.min(col_w.saturating_sub(17));
+    let bar_len = ((value as f32 / 180.0 * bar_w as f32) as usize).min(bar_w);
+    let filled  = colorize_line(&"█".repeat(bar_len), &value).to_string();
+    let empty   = "░".repeat(bar_w - bar_len)
+        .truecolor(EMPTY_BAR_CLR.0, EMPTY_BAR_CLR.1, EMPTY_BAR_CLR.2)
+        .to_string();
+    let label = format!("{:<8}", stat_name)
+        .truecolor(LABEL_CLR.0, LABEL_CLR.1, LABEL_CLR.2)
+        .to_string();
+    format!("  {}  {:>3}   {}{}", label, value, filled, empty)
+}
+
+// Builds the stacked display lines for a Pokémon (identity header + physical info + stats).
+// col_w is the exact inner width of the enclosing border column.
+pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient, col_w: usize) -> Vec<String> {
     let generation_str = match pokemon_species::get_by_name(&p.species.name, client).await {
         Ok(species) => format_generation(&species.generation.name),
-        Err(_) => String::from("Unknown"),
+        Err(_) => String::from("?"),
     };
 
-    let height_in_meters = p.height as f32 / 10.0;
-    let weight_in_kg = p.weight as f32 / 10.0;
+    let height_m  = p.height as f32 / 10.0;
+    let weight_kg = p.weight as f32 / 10.0;
 
-    let abilities_list: String = p
-        .abilities
-        .iter()
-        .filter_map(|a| a.ability.as_ref())
-        .map(|ability| format_name(&ability.name))
-        .collect::<Vec<_>>()
-        .join(", ");
-
-    let formatted_name = format_name(&p.name);
+    let name      = format_name(&p.name).bold().to_string();
+    let dex_id    = format!("#{}", p.id)
+        .truecolor(LABEL_CLR.0, LABEL_CLR.1, LABEL_CLR.2).to_string();
+    let gen_str   = format!("Gen {}", generation_str)
+        .truecolor(LABEL_CLR.0, LABEL_CLR.1, LABEL_CLR.2).to_string();
     let types_str = types_to_string(p);
-    let types_vis = visible_len(&types_str);
 
-    let value_width = [
-        formatted_name.len(),
-        format!("{} m", height_in_meters).len(),
-        format!("{} kg", weight_in_kg).len(),
-        types_vis,
-        abilities_list.len(),
-    ].iter().copied().max().unwrap_or(10).max(12);
+    let abilities_str = p.abilities.iter()
+        .filter_map(|a| a.ability.as_ref())
+        .map(|a| format_name(&a.name))
+        .collect::<Vec<_>>()
+        .join("  ·  ");
 
-    let value_width = value_width.min(max_value_width.unwrap_or(usize::MAX));
-    let name_display = truncate_display(&formatted_name, value_width);
-    let abilities_display = truncate_display(&abilities_list, value_width);
+    let h_label = "Height".truecolor(LABEL_CLR.0, LABEL_CLR.1, LABEL_CLR.2).to_string();
+    let w_label = "Weight".truecolor(LABEL_CLR.0, LABEL_CLR.1, LABEL_CLR.2).to_string();
+    let a_label = "Abilities".truecolor(LABEL_CLR.0, LABEL_CLR.1, LABEL_CLR.2).to_string();
+    let dot     = "   ·   ".truecolor(RULE_CLR.0, RULE_CLR.1, RULE_CLR.2).to_string();
 
-    let info_width = 14 + value_width;
-    let eq   = "=".truecolor(BCLR.0, BCLR.1, BCLR.2).to_string();
-    let pipe = "|".truecolor(BCLR.0, BCLR.1, BCLR.2).to_string();
-    let sep  = eq.repeat(info_width + 1);
-    let types_pad = " ".repeat(value_width.saturating_sub(types_vis));
-
-    let info_lines: Vec<String> = vec![
-        sep.clone(),
-        format!("{} Name:       {:<w$} {}", pipe, name_display,               pipe, w = value_width),
-        format!("{} Dex No:     {:<w$} {}", pipe, format!("#{}", p.id),       pipe, w = value_width),
-        format!("{} Height:     {:<w$} {}", pipe, format!("{} m", height_in_meters), pipe, w = value_width),
-        format!("{} Weight:     {:<w$} {}", pipe, format!("{} kg", weight_in_kg),    pipe, w = value_width),
-        format!("{} Types:      {}{} {}", pipe, types_str, types_pad,               pipe),
-        format!("{} Abilities:  {:<w$} {}", pipe, abilities_display,           pipe, w = value_width),
-        format!("{} Generation: {:<w$} {}", pipe, generation_str,              pipe, w = value_width),
-        format!("{} {:<w$} {}", pipe, "",                                      pipe, w = value_width + 12),
-        sep,
-    ];
+    let physical_line = format!("{}  {:.1} m{}{}  {:.1} kg",
+        h_label, height_m, dot, w_label, weight_kg);
+    let ability_line  = format!("{}   {}", a_label, abilities_str);
 
     let base_stat_total: i64 = p.stats.iter().map(|s| s.base_stat).sum();
-    let stat_lines = build_stat_lines(&p.stats, base_stat_total);
+    let bst_right = format!("BST  {}", base_stat_total).bold().to_string();
+    let bst_line  = right_align("", &bst_right, col_w);
 
-    const GAP: usize = 2;
-    let max_lines = info_lines.len().max(stat_lines.len());
-    let mut lines = Vec::with_capacity(max_lines);
+    let mut lines: Vec<String> = Vec::new();
 
-    for i in 0..max_lines {
-        let line = match (info_lines.get(i), stat_lines.get(i)) {
-            (Some(left), Some(right)) => {
-                let pad = " ".repeat(info_width + GAP - visible_len(left));
-                format!("{}{}{}", left, pad, right)
-            }
-            (Some(left), None) => left.clone(),
-            (None, Some(right)) => format!("{:>width$}{}", "", right, width = info_width + GAP),
-            (None, None) => String::new(),
-        };
-        lines.push(line);
+    // Identity header
+    lines.push(right_align(&name, &dex_id, col_w));
+    lines.push(right_align(&types_str, &gen_str, col_w));
+    lines.push(plain_rule(col_w));
+
+    // Physical info
+    lines.push(physical_line);
+    lines.push(ability_line);
+    lines.push(String::new());
+
+    // Base stats
+    lines.push(section_rule("Base Stats", col_w));
+    for s in &p.stats {
+        lines.push(stat_line(&format_stat_name(&s.stat.name), s.base_stat, col_w));
     }
+    lines.push(bst_line);
+    lines.push(String::new());
 
     lines
 }
@@ -207,41 +183,35 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient, s
     let p = pokemon::get_by_name(pokemon_name, client).await
         .map_err(|e| format!("Could not find '{}'. ({})", pokemon_name, e))?;
 
-    let display_lines = pokemon_display_lines(&p, client, None).await;
-    let col_w = display_lines.iter().map(|l| visible_len(l)).max().unwrap_or(0);
+    let display_lines = pokemon_display_lines(&p, client, DEFAULT_COL_W).await;
+    let matchup       = type_hash(&p, client).await;
+    let matchup_lines = build_type_matchup_lines(&matchup, DEFAULT_COL_W);
+    let flavor_text   = get_flavor_text(&p.species.name, client).await;
 
-    let matchup = type_hash(&p, client).await;
-    let matchup_lines = build_type_matchup_lines(&matchup, col_w);
-
-    let flavor_text = get_flavor_text(&p.species.name, client).await;
-
-    println!("{}", border_top(col_w));
+    println!("{}", border_top(DEFAULT_COL_W));
     let sprite_url = if shiny { p.sprites.front_shiny.as_deref() } else { p.sprites.front_default.as_deref() };
     if let Some(url) = sprite_url {
         if let Some(bytes) = fetch_sprite(url).await {
-            // col_w + 4 = outer border width, so sprite centers within the bordered frame
-            display_sprite(bytes, col_w + 4);
+            display_sprite(bytes, DEFAULT_COL_W + 4);
         }
     }
+    println!("{}", border_row("", DEFAULT_COL_W));
+
     for line in &display_lines {
-        println!("{}", border_row(line, col_w));
+        println!("{}", border_row(line, DEFAULT_COL_W));
     }
     for line in &matchup_lines {
-        println!("{}", border_row(line, col_w));
+        println!("{}", border_row(line, DEFAULT_COL_W));
     }
+
     if let Some(text) = flavor_text {
-        let eq   = "=".truecolor(BCLR.0, BCLR.1, BCLR.2).to_string();
-        let sep  = eq.repeat(col_w);
-        println!("{}", border_row(&sep, col_w));
-        let label = "Pokédex:".truecolor(200, 200, 200).bold().to_string();
-        let indent = " ".repeat(visible_len(&label) + 1);
-        let wrap_w = col_w.saturating_sub(visible_len(&label) + 2);
-        let wrapped = wrap_text(&text, wrap_w);
-        for (i, line) in wrapped.iter().enumerate() {
-            let prefix = if i == 0 { format!("{} ", label) } else { indent.clone() };
-            println!("{}", border_row(&format!("{}{}", prefix, line), col_w));
+        println!("{}", border_row(&section_rule("Pokédex", DEFAULT_COL_W), DEFAULT_COL_W));
+        for line in wrap_text(&text, DEFAULT_COL_W - 2) {
+            println!("{}", border_row(&line, DEFAULT_COL_W));
         }
+        println!("{}", border_row("", DEFAULT_COL_W));
     }
-    println!("{}", border_bottom(col_w));
+
+    println!("{}", border_bottom(DEFAULT_COL_W));
     Ok(())
 }

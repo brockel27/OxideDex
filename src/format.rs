@@ -2,6 +2,11 @@ use rustemon::model::pokemon::Pokemon;
 use colored::*;
 use image::{DynamicImage, GenericImageView};
 
+pub const BORDER_CLR:    (u8, u8, u8) = (80,  95,  130);
+pub const RULE_CLR:      (u8, u8, u8) = (80,  95,  130);
+pub const LABEL_CLR:     (u8, u8, u8) = (180, 185, 200);
+pub const EMPTY_BAR_CLR: (u8, u8, u8) = (55,  55,  65);
+
 // Colors a stat bar string based on the stat's value.
 pub fn colorize_line(stat_line: &str, stat_value: &i64) -> ColoredString {
     match stat_value {
@@ -52,13 +57,14 @@ pub fn visible_len(s: &str) -> usize {
     len
 }
 
-// Formats a Pokémon's types as a comma-separated colored string.
+// Formats a Pokémon's types as a colored string joined by a colored dot separator.
 pub fn types_to_string(p: &Pokemon) -> String {
+    let dot = "  ·  ".truecolor(RULE_CLR.0, RULE_CLR.1, RULE_CLR.2).to_string();
     p.types
         .iter()
         .map(|ptype| colorize_type(&ptype.type_.name).to_string())
         .collect::<Vec<_>>()
-        .join(", ")
+        .join(&dot)
 }
 
 // Converts a hyphen-separated PokeAPI name to Title Case (e.g. "mr-mime" → "Mr Mime").
@@ -105,32 +111,45 @@ pub fn truncate_display(s: &str, max_len: usize) -> String {
     }
 }
 
-// border color
-const BCLR: (u8, u8, u8) = (180, 60, 60);
-
-// Returns the top border line of the outer display frame.
+// Returns the top border line of the outer display frame (rounded corners).
 pub fn border_top(inner_w: usize) -> String {
     format!("{}{}{}",
-        "╔".truecolor(BCLR.0, BCLR.1, BCLR.2),
-        "═".repeat(inner_w + 2).truecolor(BCLR.0, BCLR.1, BCLR.2),
-        "╗".truecolor(BCLR.0, BCLR.1, BCLR.2))
+        "╭".truecolor(BORDER_CLR.0, BORDER_CLR.1, BORDER_CLR.2),
+        "─".repeat(inner_w + 2).truecolor(BORDER_CLR.0, BORDER_CLR.1, BORDER_CLR.2),
+        "╮".truecolor(BORDER_CLR.0, BORDER_CLR.1, BORDER_CLR.2))
 }
 
-// Returns the bottom border line of the outer display frame.
+// Returns the bottom border line of the outer display frame (rounded corners).
 pub fn border_bottom(inner_w: usize) -> String {
     format!("{}{}{}",
-        "╚".truecolor(BCLR.0, BCLR.1, BCLR.2),
-        "═".repeat(inner_w + 2).truecolor(BCLR.0, BCLR.1, BCLR.2),
-        "╝".truecolor(BCLR.0, BCLR.1, BCLR.2))
+        "╰".truecolor(BORDER_CLR.0, BORDER_CLR.1, BORDER_CLR.2),
+        "─".repeat(inner_w + 2).truecolor(BORDER_CLR.0, BORDER_CLR.1, BORDER_CLR.2),
+        "╯".truecolor(BORDER_CLR.0, BORDER_CLR.1, BORDER_CLR.2))
 }
 
 // Wraps a content string with side borders, padding to inner_w visible columns.
 pub fn border_row(content: &str, inner_w: usize) -> String {
     let pad = " ".repeat(inner_w.saturating_sub(visible_len(content)));
     format!("{} {}{} {}",
-        "║".truecolor(BCLR.0, BCLR.1, BCLR.2),
+        "│".truecolor(BORDER_CLR.0, BORDER_CLR.1, BORDER_CLR.2),
         content, pad,
-        "║".truecolor(BCLR.0, BCLR.1, BCLR.2))
+        "│".truecolor(BORDER_CLR.0, BORDER_CLR.1, BORDER_CLR.2))
+}
+
+// Returns "─── Label ──────────────" spanning inner_w chars.
+pub fn section_rule(label: &str, inner_w: usize) -> String {
+    let prefix_vis  = 5 + label.chars().count(); // "─── " (4) + label + " " (1)
+    let fill        = inner_w.saturating_sub(prefix_vis);
+    let dashes_pre  = "─── ".truecolor(RULE_CLR.0, RULE_CLR.1, RULE_CLR.2).to_string();
+    let label_part  = label.truecolor(LABEL_CLR.0, LABEL_CLR.1, LABEL_CLR.2).bold().to_string();
+    let dashes_post = format!(" {}", "─".repeat(fill))
+        .truecolor(RULE_CLR.0, RULE_CLR.1, RULE_CLR.2).to_string();
+    format!("{}{}{}", dashes_pre, label_part, dashes_post)
+}
+
+// Returns a plain "──────────────────────────" rule spanning inner_w chars.
+pub fn plain_rule(inner_w: usize) -> String {
+    "─".repeat(inner_w).truecolor(RULE_CLR.0, RULE_CLR.1, RULE_CLR.2).to_string()
 }
 
 // Returns true if every pixel in row y of the image is fully transparent.
