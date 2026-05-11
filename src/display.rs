@@ -1,6 +1,7 @@
 use crate::format::*;
 use crate::type_matchup::{type_hash, build_type_matchup_lines};
 
+use rand::seq::SliceRandom;
 use rustemon::client::RustemonClient;
 use rustemon::model::pokemon::Pokemon;
 use rustemon::pokemon::{pokemon, pokemon_species};
@@ -54,6 +55,45 @@ fn display_sprite(bytes: bytes::Bytes, text_width: usize) {
         }
         Err(e) => eprintln!("Could not decode image: {}", e),
     }
+}
+
+// Fetches a random English Pokédex flavor text entry for a species.
+async fn get_flavor_text(species_name: &str, client: &RustemonClient) -> Option<String> {
+    let species = pokemon_species::get_by_name(species_name, client).await.ok()?;
+    let english: Vec<_> = species
+        .flavor_text_entries
+        .iter()
+        .filter(|e| e.language.name == "en")
+        .collect();
+    let entry = english.choose(&mut rand::thread_rng())?;
+    let cleaned = entry
+        .flavor_text
+        .replace(['\n', '\r', '\x0c'], " ")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    Some(cleaned)
+}
+
+// Wraps flavor text into lines of at most max_w visible chars.
+fn wrap_text(text: &str, max_w: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut current = String::new();
+    for word in text.split_whitespace() {
+        if current.is_empty() {
+            current.push_str(word);
+        } else if current.len() + 1 + word.len() <= max_w {
+            current.push(' ');
+            current.push_str(word);
+        } else {
+            lines.push(current);
+            current = word.to_string();
+        }
+    }
+    if !current.is_empty() {
+        lines.push(current);
+    }
+    lines
 }
 
 const BCLR: (u8, u8, u8) = (225, 170, 160);
@@ -173,6 +213,8 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) -
     let matchup = type_hash(&p, client).await;
     let matchup_lines = build_type_matchup_lines(&matchup, col_w);
 
+    let flavor_text = get_flavor_text(&p.species.name, client).await;
+
     println!("{}", border_top(col_w));
     if let Some(url) = p.sprites.front_default.as_deref() {
         if let Some(bytes) = fetch_sprite(url).await {
@@ -185,6 +227,19 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) -
     }
     for line in &matchup_lines {
         println!("{}", border_row(line, col_w));
+    }
+    if let Some(text) = flavor_text {
+        let eq   = "=".truecolor(BCLR.0, BCLR.1, BCLR.2).to_string();
+        let sep  = eq.repeat(col_w);
+        println!("{}", border_row(&sep, col_w));
+        let label = "Pokédex:".truecolor(200, 200, 200).bold().to_string();
+        let indent = " ".repeat(visible_len(&label) + 1);
+        let wrap_w = col_w.saturating_sub(visible_len(&label) + 2);
+        let wrapped = wrap_text(&text, wrap_w);
+        for (i, line) in wrapped.iter().enumerate() {
+            let prefix = if i == 0 { format!("{} ", label) } else { indent.clone() };
+            println!("{}", border_row(&format!("{}{}", prefix, line), col_w));
+        }
     }
     println!("{}", border_bottom(col_w));
     Ok(())

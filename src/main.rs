@@ -7,6 +7,7 @@ use crate::display::display_pokemon_data;
 use crate::dual_display::display_dual;
 
 use colored::*;
+use rand::Rng;
 use rustemon::client::RustemonClient;
 use std::env;
 
@@ -27,7 +28,12 @@ async fn main() {
             std::process::exit(1);
         }
     } else if args.len() == 2 {
-        let pokemon_name = args[1].to_lowercase();
+        let raw = args[1].to_lowercase();
+        let pokemon_name = if raw == "random" {
+            rand::thread_rng().gen_range(1..=1025).to_string()
+        } else {
+            raw
+        };
         if let Err(msg) = display_pokemon_data(&pokemon_name, &client).await {
             eprintln!("Error: {}", msg);
             std::process::exit(1);
