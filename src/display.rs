@@ -58,7 +58,7 @@ fn display_sprite(bytes: bytes::Bytes, text_width: usize) {
 }
 
 // Fetches a random English Pokédex flavor text entry for a species.
-async fn get_flavor_text(species_name: &str, client: &RustemonClient) -> Option<String> {
+pub async fn get_flavor_text(species_name: &str, client: &RustemonClient) -> Option<String> {
     let species = pokemon_species::get_by_name(species_name, client).await.ok()?;
     let english: Vec<_> = species
         .flavor_text_entries
@@ -76,7 +76,7 @@ async fn get_flavor_text(species_name: &str, client: &RustemonClient) -> Option<
 }
 
 // Wraps flavor text into lines of at most max_w visible chars.
-fn wrap_text(text: &str, max_w: usize) -> Vec<String> {
+pub fn wrap_text(text: &str, max_w: usize) -> Vec<String> {
     let mut lines = Vec::new();
     let mut current = String::new();
     for word in text.split_whitespace() {
@@ -203,7 +203,7 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient, max_val
 }
 
 // Fetches a Pokémon by name, renders its sprite, and prints its info.
-pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) -> Result<(), String> {
+pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient, shiny: bool) -> Result<(), String> {
     let p = pokemon::get_by_name(pokemon_name, client).await
         .map_err(|e| format!("Could not find '{}'. ({})", pokemon_name, e))?;
 
@@ -216,7 +216,8 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient) -
     let flavor_text = get_flavor_text(&p.species.name, client).await;
 
     println!("{}", border_top(col_w));
-    if let Some(url) = p.sprites.front_default.as_deref() {
+    let sprite_url = if shiny { p.sprites.front_shiny.as_deref() } else { p.sprites.front_default.as_deref() };
+    if let Some(url) = sprite_url {
         if let Some(bytes) = fetch_sprite(url).await {
             // col_w + 4 = outer border width, so sprite centers within the bordered frame
             display_sprite(bytes, col_w + 4);

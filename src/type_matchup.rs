@@ -48,12 +48,14 @@ fn colorize_multiplier(mult: f32) -> ColoredString {
     let s = format_mult(mult);
     if      mult == 0.0  { s.yellow().bold() }
     else if mult == 0.25 { s.cyan().bold() }
-    else if mult == 0.5  { s.green().bold() }
+    else if mult == 0.5  { s.truecolor(12, 171, 12).bold() }
     else if mult == 1.0  { s.truecolor(150, 150, 150).normal() }
-    else if mult == 2.0  { s.truecolor(255, 128, 0).bold() }
-    else if mult == 4.0  { s.red().bold() }
+    else if mult == 2.0  { s.truecolor(209, 106, 2).bold() }
+    else if mult == 4.0  { s.truecolor(145, 28, 28).bold() }
     else                 { s.normal() }
 }
+
+const BCLR: (u8, u8, u8) = (225, 170, 160);
 
 // Builds a 3×6 bordered grid of all 18 types with color-coded damage multipliers as printable lines.
 // min_width expands the box to at least that many visible columns; pass 0 for the natural 46-column width.
@@ -68,8 +70,8 @@ pub fn build_type_matchup_lines(matchup: &HashMap<String, f32>, min_width: usize
     let left_pad  = extra / 2;
     let right_pad = extra - left_pad;
 
-    let eq   = "=".truecolor(120, 115, 110).to_string();
-    let pipe = "|".truecolor(120, 115, 110).to_string();
+    let eq   = "=".truecolor(BCLR.0, BCLR.1, BCLR.2).to_string();
+    let pipe = "|".truecolor(BCLR.0, BCLR.1, BCLR.2).to_string();
     let sep  = eq.repeat(total_w);
 
     let mut lines = vec![

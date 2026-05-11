@@ -1,4 +1,4 @@
-use crate::display::{fetch_sprite, pokemon_display_lines};
+use crate::display::{fetch_sprite, get_flavor_text, pokemon_display_lines, wrap_text};
 use crate::format::{border_bottom, border_row, border_top, is_col_transparent, is_row_transparent, visible_len};
 use crossterm::terminal;
 use crate::type_matchup::type_hash;
@@ -71,7 +71,7 @@ fn render_composite(a: RgbaImage, b: RgbaImage, text_width: usize) {
 }
 
 // Fetches two Pokémon, renders their sprites side-by-side, and prints their info and type matchup boxes.
-pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonClient) -> Result<(), String> {
+pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonClient, shiny_a: bool, shiny_b: bool) -> Result<(), String> {
     let pa = pokemon::get_by_name(pokemon_a, client).await
         .map_err(|e| format!("Could not find '{}'. ({})", pokemon_a, e))?;
     let pb = pokemon::get_by_name(pokemon_b, client).await
@@ -93,14 +93,10 @@ pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonCli
     let matchup_lines_b = build_type_matchup_lines(&type_hash(&pb, client).await, col_w_b);
     let text_width = col_w_a + COL_GAP + 1 + 2 + col_w_b;
 
-    let sprite_a = match pa.sprites.front_default.as_deref() {
-        Some(url) => load_sprite(url).await,
-        None => None,
-    };
-    let sprite_b = match pb.sprites.front_default.as_deref() {
-        Some(url) => load_sprite(url).await,
-        None => None,
-    };
+    let url_a = if shiny_a { pa.sprites.front_shiny.as_deref() } else { pa.sprites.front_default.as_deref() };
+    let url_b = if shiny_b { pb.sprites.front_shiny.as_deref() } else { pb.sprites.front_default.as_deref() };
+    let sprite_a = match url_a { Some(url) => load_sprite(url).await, None => None };
+    let sprite_b = match url_b { Some(url) => load_sprite(url).await, None => None };
 
     println!("{}", border_top(text_width));
     match (sprite_a, sprite_b) {
@@ -125,6 +121,36 @@ pub async fn display_dual(pokemon_a: &str, pokemon_b: &str, client: &RustemonCli
         let pad = " ".repeat(col_w_a.saturating_sub(visible_len(left)) + COL_GAP);
         let line = format!("{}{}{}  {}", left, pad, "|".truecolor(120, 115, 110), right);
         println!("{}", border_row(&line, text_width));
+    }
+
+    let flavor_a = get_flavor_text(&pa.species.name, client).await;
+    let flavor_b = get_flavor_text(&pb.species.name, client).await;
+
+    if flavor_a.is_some() || flavor_b.is_some() {
+        const BCLR: (u8, u8, u8) = (225, 170, 160);
+        let eq  = "=".truecolor(BCLR.0, BCLR.1, BCLR.2).to_string();
+        let sep = eq.repeat(text_width);
+        println!("{}", border_row(&sep, text_width));
+
+        let label     = "Pokédex:".truecolor(200, 200, 200).bold().to_string();
+        let label_vis = visible_len(&label);
+        let indent    = " ".repeat(label_vis + 1);
+        let wrap_w_a  = col_w_a.saturating_sub(label_vis + 2);
+        let wrap_w_b  = col_w_b.saturating_sub(label_vis + 2);
+
+        let wrapped_a = flavor_a.as_deref().map(|t| wrap_text(t, wrap_w_a)).unwrap_or_default();
+        let wrapped_b = flavor_b.as_deref().map(|t| wrap_text(t, wrap_w_b)).unwrap_or_default();
+
+        let max_ft = wrapped_a.len().max(wrapped_b.len());
+        for i in 0..max_ft {
+            let prefix_a = if i == 0 { format!("{} ", label) } else { indent.clone() };
+            let prefix_b = if i == 0 { format!("{} ", label) } else { indent.clone() };
+            let left  = format!("{}{}", prefix_a, wrapped_a.get(i).map(|s| s.as_str()).unwrap_or(""));
+            let right = format!("{}{}", prefix_b, wrapped_b.get(i).map(|s| s.as_str()).unwrap_or(""));
+            let pad   = " ".repeat(col_w_a.saturating_sub(visible_len(&left)) + COL_GAP);
+            let line  = format!("{}{}{}  {}", left, pad, "|".truecolor(120, 115, 110), right);
+            println!("{}", border_row(&line, text_width));
+        }
     }
 
     println!("{}", border_bottom(text_width));
