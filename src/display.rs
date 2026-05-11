@@ -92,6 +92,23 @@ fn sprite_to_lines(bytes: bytes::Bytes, target_cols: usize) -> Option<Vec<String
     Some(lines)
 }
 
+// Fetches names of non-default varieties for a species (megas, gigantamax, aesthetic forms, etc.).
+async fn get_alternate_forms(species_name: &str, base_name: &str, client: &RustemonClient) -> Vec<String> {
+    let Ok(species) = pokemon_species::get_by_name(species_name, client).await else {
+        return Vec::new();
+    };
+    let prefix = format!("{}-", base_name.to_lowercase());
+    species.varieties
+        .iter()
+        .filter(|v| !v.is_default)
+        .map(|v| {
+            let raw = &v.pokemon.name;
+            let stripped = raw.strip_prefix(&prefix).unwrap_or(raw.as_str());
+            format_name(stripped)
+        })
+        .collect()
+}
+
 // Fetches a random English Pokédex flavor text entry for a species.
 pub async fn get_flavor_text(species_name: &str, client: &RustemonClient) -> Option<String> {
     let species = pokemon_species::get_by_name(species_name, client).await.ok()?;
@@ -226,8 +243,9 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient, s
     let matchup       = type_hash(&p, client).await;
     let matchup_lines = build_type_matchup_lines(&matchup, INFO_COL_W);
     let flavor_text   = get_flavor_text(&p.species.name, client).await;
+    let forms         = get_alternate_forms(&p.species.name, &p.name, client).await;
 
-    // Assemble the full right column: identity/stats → type matchup → pokédex
+    // Assemble the full right column: identity/stats → type matchup → pokédex → forms
     let mut right_col: Vec<String> = Vec::new();
     right_col.extend(info_lines);
     right_col.extend(matchup_lines);
@@ -235,6 +253,15 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient, s
         right_col.push(String::new());
         right_col.push(section_rule("Pokédex", INFO_COL_W));
         for line in wrap_text(&text, INFO_COL_W - 2) { right_col.push(line); }
+        right_col.push(String::new());
+    }
+    if !forms.is_empty() {
+        const MAX_FORMS: usize = 6;
+        let truncated = forms.len() > MAX_FORMS;
+        let mut joined = forms.iter().take(MAX_FORMS).cloned().collect::<Vec<_>>().join(", ");
+        if truncated { joined.push_str(", ..."); }
+        right_col.push(section_rule("Alternate Forms", INFO_COL_W));
+        for line in wrap_text(&joined, INFO_COL_W - 2) { right_col.push(line); }
         right_col.push(String::new());
     }
 
