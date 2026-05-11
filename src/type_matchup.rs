@@ -98,9 +98,13 @@ pub fn build_type_matchup_lines(matchup: &HashMap<String, f32>, col_w: usize) ->
     }
 
     let mut lines = vec![section_rule("Type Effectiveness", col_w)];
-    for row in build_category_row("Immune", &immune, col_w)      { lines.push(row); }
-    for row in build_category_row("Resists", &resists, col_w)    { lines.push(row); }
-    for row in build_category_row("Weak", &weak, col_w)          { lines.push(row); }
+    lines.push(String::new());
+    for row in build_category_row("Immune", &immune, col_w)          { lines.push(row); }
+    lines.push(String::new());
+    for row in build_category_row("Resists", &resists, col_w)        { lines.push(row); }
+    lines.push(String::new());
+    for row in build_category_row("Weak", &weak, col_w)              { lines.push(row); }
+    lines.push(String::new());
     for row in build_category_row("Double Weak", &double_weak, col_w) { lines.push(row); }
     lines.push(String::new());
     lines
