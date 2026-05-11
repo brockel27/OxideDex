@@ -36,12 +36,15 @@
 - **Single display** — sprite, info box (name, dex number, height, weight, types, abilities, generation), stat bars with color-coded BST visualization, and a full 18-type effectiveness grid
 - **Dual display** — two Pokémon side by side with their sprites composited into one image, individual info/stat columns, and per-Pokémon type effectiveness grids
 - **Pokédex flavor text** — a randomly selected game description shown at the bottom of every lookup (or side-by-side in dual mode)
+- **Alternate Forms** — non-default varieties (Megas, Gigantamax, regional forms, cosplay caps) and appearance-only forms (Furfrou trims, Burmy cloaks, Unown letters) are listed together, truncated to 6 with `...` for Pokémon with many variants
+- **Form-name lookup** — pass a specific form slug to display that variant with its own sprite (e.g. `furfrou-heart`, `burmy-sandy`, `charizard-mega-x`); appearance-only forms that have no separate Pokémon entry are resolved automatically via the form endpoint
 - **Shiny sprites** — add `-s` after a Pokémon name to display its shiny sprite; in dual display each slot is independently controlled
 - **Random mode** — use `random` as a name to pull a surprise Pokémon from the full Dex (#1–1025)
 - **Responsive layout** — dual display automatically scales column widths to fit your terminal, truncating long ability lists gracefully when needed
 - **Type effectiveness** — multiplicative dual-type stacking (0×, ¼×, ½×, 1×, 2×, 4×) rendered in a 3×6 color-coded grid
 - **Local API cache** — responses are cached via rustemon so repeat lookups are near-instant
 - **Truecolor styling** — type names, stat bars, and effectiveness multipliers are all color-coded; decorative box-drawing borders
+- **Native-size sprites** — small sprites (older generations) render at their natural pixel size and are never upscaled
 
 ---
 
@@ -105,6 +108,14 @@ cargo run -- pikachu -s pikachu -s       # both shiny
 
 # Random slots work in dual display too
 cargo run -- random random -s
+
+# Specific alternate form — appearance-only forms (Furfrou trims, Burmy cloaks, etc.)
+cargo run -- furfrou-heart
+cargo run -- burmy-sandy
+
+# Specific alternate form — mechanically distinct varieties (Megas, regional forms, etc.)
+cargo run -- charizard-mega-x
+cargo run -- pikachu-original-cap
 ```
 
 ---
