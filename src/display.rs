@@ -3,8 +3,10 @@ use crate::type_matchup::{type_hash, build_type_matchup_lines};
 
 use rand::seq::SliceRandom;
 use rustemon::client::RustemonClient;
+use rustemon::model::evolution::ChainLink;
 use rustemon::model::pokemon::Pokemon;
 use rustemon::pokemon::{pokemon, pokemon_form, pokemon_species};
+use rustemon::Follow;
 use std::io::Cursor;
 use colored::Colorize;
 
@@ -225,6 +227,52 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient, col_w: 
     lines
 }
 
+// Recursively renders a ChainLink into display lines, tracking visible prefix length separately
+// from the colored prefix string so indentation stays aligned despite ANSI codes.
+fn render_chain_link(link: &ChainLink, current: &str, prefix_colored: String, prefix_vis: usize, out: &mut Vec<String>) {
+    const ARROW: &str = " → ";
+    const ARROW_VIS: usize = 3;
+    let arrow_colored = ARROW.truecolor(RULE_CLR.0, RULE_CLR.1, RULE_CLR.2).to_string();
+
+    let plain = format_name(&link.species.name);
+    let vis   = plain.len();
+    let colored_name = if link.species.name == current {
+        plain.bold().truecolor(255, 200, 50).to_string()
+    } else {
+        plain.truecolor(LABEL_CLR.0, LABEL_CLR.1, LABEL_CLR.2).to_string()
+    };
+
+    let node_str = format!("{}{}", prefix_colored, colored_name);
+    let node_vis = prefix_vis + vis;
+
+    if link.evolves_to.is_empty() {
+        out.push(node_str);
+        return;
+    }
+
+    render_chain_link(
+        &link.evolves_to[0], current,
+        format!("{}{}", node_str, arrow_colored),
+        node_vis + ARROW_VIS, out,
+    );
+
+    for child in &link.evolves_to[1..] {
+        let indent = format!("{}{}", " ".repeat(node_vis), arrow_colored);
+        render_chain_link(child, current, indent, node_vis + ARROW_VIS, out);
+    }
+}
+
+// Fetches the evolution chain for a species and returns display lines, or empty if single-stage.
+async fn get_evo_lines(species_name: &str, current_species: &str, client: &RustemonClient) -> Vec<String> {
+    let Ok(species) = pokemon_species::get_by_name(species_name, client).await else { return Vec::new(); };
+    let Some(ec_ref) = species.evolution_chain.as_ref() else { return Vec::new(); };
+    let Ok(chain) = ec_ref.follow(client).await else { return Vec::new(); };
+    if chain.chain.evolves_to.is_empty() { return Vec::new(); }
+    let mut lines = Vec::new();
+    render_chain_link(&chain.chain, current_species, String::new(), 0, &mut lines);
+    lines
+}
+
 // Fetches a Pokémon by name, renders its sprite side-by-side with info, and prints its data.
 pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient, shiny: bool) -> Result<(), String> {
     // Try direct Pokémon lookup; fall back to pokemon-form for appearance-only variants
@@ -256,6 +304,7 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient, s
     let matchup       = type_hash(&p, client).await;
     let matchup_lines = build_type_matchup_lines(&matchup, INFO_COL_W);
     let flavor_text   = get_flavor_text(&p.species.name, client).await;
+    let evo_lines     = get_evo_lines(&p.species.name, &p.species.name, client).await;
     // Varieties (megas, regional forms, cosplay variants, etc.)
     let mut forms = get_alternate_forms(&p.species.name, &p.name, client).await;
 
@@ -281,6 +330,11 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient, s
         right_col.push(String::new());
         right_col.push(section_rule("Pokédex", INFO_COL_W));
         for line in wrap_text(&text, INFO_COL_W - 2) { right_col.push(line); }
+        right_col.push(String::new());
+    }
+    if !evo_lines.is_empty() {
+        right_col.push(section_rule("Evolution", INFO_COL_W));
+        right_col.extend(evo_lines);
         right_col.push(String::new());
     }
     if !forms.is_empty() {
