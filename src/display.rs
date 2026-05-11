@@ -284,10 +284,7 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient, s
         right_col.push(String::new());
     }
     if !forms.is_empty() {
-        const MAX_FORMS: usize = 6;
-        let truncated = forms.len() > MAX_FORMS;
-        let mut joined = forms.iter().take(MAX_FORMS).cloned().collect::<Vec<_>>().join(", ");
-        if truncated { joined.push_str(", ..."); }
+        let joined = forms.join(", ");
         right_col.push(section_rule("Alternate Forms", INFO_COL_W));
         for line in wrap_text(&joined, INFO_COL_W - 2) { right_col.push(line); }
         right_col.push(String::new());
