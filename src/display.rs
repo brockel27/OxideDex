@@ -196,6 +196,7 @@ pub async fn pokemon_display_lines(p: &Pokemon, client: &RustemonClient, col_w: 
     lines.push(physical_line);
     lines.push(ability_line);
     lines.push(String::new());
+    lines.push(String::new());
 
     lines.push(section_rule("Base Stats", col_w));
     for s in &p.stats {
@@ -231,6 +232,7 @@ pub async fn display_pokemon_data(pokemon_name: &str, client: &RustemonClient, s
     right_col.extend(info_lines);
     right_col.extend(matchup_lines);
     if let Some(text) = flavor_text {
+        right_col.push(String::new());
         right_col.push(section_rule("Pokédex", INFO_COL_W));
         for line in wrap_text(&text, INFO_COL_W - 2) { right_col.push(line); }
         right_col.push(String::new());
